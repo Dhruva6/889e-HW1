@@ -1,0 +1,13 @@
+18-889e: Homework 1 programming Solution
+
+The homework for the programming assignment is stored as an ipython notebook (with the .ipynb) extension that can be opened and run on a browser if you have 'ipython' and 'ipython notebook' installed.
+To install ipython and notebook - look at : http://ipython.org/install.html
+
+Additionally, the code requires the 'scikit learn' python package. Instructions for installing this are at: scikit-learn.org/stable/install.html
+
+Alternatively, the 'pure python' version of the script can be run as well. This is the file with just the '.py' extension.
+
+TODOs:
+-> Currently the 'NA' fields in the data are just being ignored. We'll need to come up with a good way of handling this.
+-> The FVI algorithm is currently running only two iterations. We'll need to figure out how many iterations to run/what the stopping condition should be.
+-> Have to still implement LSPI as well as the feature selection/feature addition part of the assignment as well as do the write up.
