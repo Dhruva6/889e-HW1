@@ -97,28 +97,39 @@ ols = linear_model.LinearRegression()
 #
 
 # the maximum number of iterations to run
-maxIter = 1
+maxIter = 1e02
 
 # the current loop counter
-iter = 0
+iter = 1
+
+# epsilon tolerance to terminate the policy improvement
+eps = 1e-02;
+
+# the initial weight vector
+w_pi = np.zeros((10,1))
 
 # loop
 while iter < maxIter:
 
+    if 0 == iter%2:
+        print "Now at policy iteration #{}".format(iter)
+    
     # Estimate the State-Action VF Approximation using LSTDQ
-    w_pi = LSTDQ(sars, current_pi)
+    new_w_pi = LSTDQ(sars, current_pi)
 
     # improve the policy
     new_pi = ImprovePolicy(sars[:,0], w_pi)
 
     # termination condition
-    # we can do a sum of per element diff between current_pi and new_pi
-    # if this sum is smaller than a TBD number, we conclude that the
-    # policy cannot be improved any further.
-
+    if np.linalg.norm(new_w_pi - w_pi) < eps:
+        print "PI converged at iteration # {}".format(iter)
+        break
+    
     # update current_pi
     current_pi = new_pi
+
+    # update w_pi
+    w_pi = new_w_pi
     
     # update iter
     iter = iter + 1
-
