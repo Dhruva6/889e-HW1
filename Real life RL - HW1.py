@@ -6,7 +6,7 @@
 # Note for Venkat: If you can open this, you have successfully managed to install ipython and the ipython notebook. Basically this forms a neat way for me to view the progress of my ideas so I tend to use it for homeworks. We can switch to scripts if you prefer that instead as well. Also, I've imported the 'numpy' package into python. The syntax of using that is close to Matlab so I thought it would make things more comfortable for you. 
 # The whole program is divided into cells that must be run in the order they appear. Basically you have to keep hitting 'Shift+Enter' to run the whole program. You can also do that on this cell.
 
-# In[54]:
+# In[104]:
 
 # Solution to the first homework of Real life reinforcement learning
 import csv
@@ -22,7 +22,7 @@ with open('generated_episodes_3000.csv') as csv_file:
 # useless to us.
 
 
-# In[55]:
+# In[105]:
 
 # Uncomment the next statement if you want to see what a row of the data looks like.
 # data[0]
@@ -30,14 +30,12 @@ with open('generated_episodes_3000.csv') as csv_file:
 #print data[0]
 
 
-# In[85]:
+# In[106]:
 
-# Fitted V/Q Iteration
-# Helper functions
-
-def create_event_iterator(data):
+from sklearn import preprocessing
+def get_known_states(data):
     """
-        Function that returns the next (s, a, r, s') pair from the input data one by one every time you call it.
+        Returns just the states that we know, i.e. states without the 'NA' in the data fields.
     """
     event_length = 9 + 9 + 2
     state_length = 9 + 2
@@ -52,37 +50,87 @@ def create_event_iterator(data):
             datum = episode[start_idx:end_idx]
             try:
                 s = datum[:9].astype(np.float)
-                a = 1.0 if datum[9:10]=='true' else 0.0
-                r = np.asscalar(datum[10:11].astype(np.float))
-                s_prime = datum[11:].astype(np.float)                
-                yield s, a, r, s_prime
+                yield s
             # There's a problem if a data field is 'NA' - Not entirely sure what do in that case so for now I'm just ignoring
             # those data points
             except ValueError:
-                pass                
+                pass    
             curr_state += 1
-
-def compute_Q(weights, s, a):
+            
+def generate_sars(data):
     """
-        Simple helper to compute the Q value given an input weight vector and the (s, a) pair
+        Function that returns the next (s, a, r, s') pair from the input data one by one every time you call it. Requires a 
+        scaler to have been computed so that we can approximate the vaues for the 'NA' pairs in the data.
     """
-    # Multiply the weights with the array of (s, a)
-    return np.dot(np.append(s, a), weights)
+    # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
+    known_states = [state for state in get_known_states(data)]
+    scaler = preprocessing.StandardScaler().fit(known_states)
+    event_length = 9 + 9 + 2
+    state_length = 9 + 2
+    num_states = 24
+    sars = []
+    for episode in data:
+        # Start at the beginning and keep looking at a net length of len(s) + len(a) + len(r) + len(s') points
+        # Each time, we increment our start position by s+a+r = 11 points
+        curr_state = 0
+        while curr_state < num_states:
+            start_idx = curr_state * state_length
+            end_idx = start_idx + event_length
+            datum = episode[start_idx:end_idx]
+            # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
+            a = 1.0 if datum[9:10]=='true' else 0.0
+            r = np.asscalar(datum[10:11].astype(np.float))
+            try:
+                s = datum[:9].astype(np.float)
+                scaler.transform(s)
+                s_prime = datum[11:].astype(np.float)       
+                scaler.transform(s_prime)
+                sars.append([s, a, r, s_prime])
+            # IF there was a value error it means there was a 'NA' field somewhere. 
+            except ValueError:
+                # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
+                # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
+                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                scaler.transform(s)
+                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                scaler.transform(s_prime).astype(np.float)
+                sars.append([s, a, r, s_prime])
+            curr_state += 1
+    return sars
 
 
-# In[89]:
+# In[107]:
 
-# Initialize the weights. Do one iteration to get things started
-event_iterator = create_event_iterator(data)
-Xs = []
-ys = []
-for s, a, r, s_prime in event_iterator:
-    y = r
-    Xs.append(np.append(s, a))
-    ys.append(y)
+def FVI(fn, sars, gamma = 0.999, iters = 1):
+    """
+        Does fixed value iteration using the input fn approximator on the input data (expected to be in SARS format)
+    """
+    # Initialize the weights. Do one iteration to get things started
+    Xs = []
+    ys = []
+    for s, a, r, s_prime in sars:
+        y = r
+        Xs.append(np.append(s, a))
+        ys.append(y)
+    fn.fit(Xs, ys)
+    for i in range(iters):
+        Xs = []
+        ys = []
+        for s, a, r, s_prime in sars:
+            y = r + gamma * max(fn.predict(np.append(s_prime, 0.0)), fn.predict(np.append(s_prime, 1.0)))
+            Xs.append(np.append(s, a))
+            ys.append(y[0])
+        fn.fit(Xs, ys)
+    return fn
 
 
-# In[90]:
+#### With that the main loop of our FVI code is pretty simply defined as below:
+
+# In[108]:
+
+# A key difference here is that we're just precomputing and storing all the s, a, r, s_prime pairs ahead of time. No generator
+# functions here.
+sars = generate_sars(data)
 
 # And now we'll have to do the following in a loop - Currently this is one iteration of proper FVI
 fn = linear_model.Lasso(alpha = 0.1)
@@ -91,15 +139,7 @@ fn = linear_model.Lasso(alpha = 0.1)
 #n_neighbors = 5
 #fn = neighbors.KNeighborsRegressor(n_neighbors, weights="distance")
 
-fn.fit(Xs, ys)
-event_iterator = create_event_iterator(data)
-Xs = []
-ys = []
-for s, a, r, s_prime in event_iterator:
-    y = r + max(fn.predict(np.append(s_prime, 0.0)), fn.predict(np.append(s_prime, 1.0)))
-    Xs.append(np.append(s, a))
-    ys.append(y[0])
-fn.fit(Xs, ys)
+FVI(fn, sars)
 
 
 # TODO:
@@ -109,11 +149,6 @@ fn.fit(Xs, ys)
 # -> What to do about the 'NA' data - Currently ignoring it but thats a very temporary solution
 # 
 # -> Try other function approximators
-
-# In[91]:
-
-
-
 
 # In[ ]:
 
