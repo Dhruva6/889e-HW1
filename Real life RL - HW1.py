@@ -6,10 +6,11 @@
 # Note for Venkat: If you can open this, you have successfully managed to install ipython and the ipython notebook. Basically this forms a neat way for me to view the progress of my ideas so I tend to use it for homeworks. We can switch to scripts if you prefer that instead as well. Also, I've imported the 'numpy' package into python. The syntax of using that is close to Matlab so I thought it would make things more comfortable for you. 
 # The whole program is divided into cells that must be run in the order they appear. Basically you have to keep hitting 'Shift+Enter' to run the whole program. You can also do that on this cell.
 
-# In[104]:
+# In[114]:
 
 # Solution to the first homework of Real life reinforcement learning
 import csv
+import math
 import numpy as np
 from sklearn import linear_model
 from sklearn import neighbors
@@ -22,7 +23,7 @@ with open('generated_episodes_3000.csv') as csv_file:
 # useless to us.
 
 
-# In[105]:
+# In[115]:
 
 # Uncomment the next statement if you want to see what a row of the data looks like.
 # data[0]
@@ -30,7 +31,7 @@ with open('generated_episodes_3000.csv') as csv_file:
 #print data[0]
 
 
-# In[106]:
+# In[116]:
 
 from sklearn import preprocessing
 def get_known_states(data):
@@ -99,12 +100,16 @@ def generate_sars(data):
     return sars
 
 
-# In[107]:
+# In[121]:
 
-def FVI(fn, sars, gamma = 0.999, iters = 1):
+def FVI(fn, sars, gamma = 0.999, tol = 0.1):
     """
         Does fixed value iteration using the input fn approximator on the input data (expected to be in SARS format)
     """
+    # From blackboard calculation
+    Br = max([r for s, a,r, s_prime in sars])
+    n_iters = math.log(((tol*(1-gamma**2))/Br) - gamma)
+    print n_iters
     # Initialize the weights. Do one iteration to get things started
     Xs = []
     ys = []
@@ -126,7 +131,7 @@ def FVI(fn, sars, gamma = 0.999, iters = 1):
 
 #### With that the main loop of our FVI code is pretty simply defined as below:
 
-# In[108]:
+# In[122]:
 
 # A key difference here is that we're just precomputing and storing all the s, a, r, s_prime pairs ahead of time. No generator
 # functions here.
@@ -146,9 +151,14 @@ FVI(fn, sars)
 # 
 # -> Figure out- How many iterations do we have to do that last cell for? When do we say we've converged
 # 
-# -> What to do about the 'NA' data - Currently ignoring it but thats a very temporary solution
+# -> OMP-TD for feature selection + possible feature set expansion
 # 
-# -> Try other function approximators
+# -> LSPI (using LSTDQ already implemented)
+
+# In[109]:
+
+
+
 
 # In[ ]:
 
