@@ -48,6 +48,19 @@ def create_event_iterator(data):
                 pass                
             curr_state += 1
 
+# generate the object that will produces us the (s,a,r,s', pi_s_prime) tuple
+event_iterator = create_event_iterator(data)
+
+# current policy 
+policy = []
+
+# iterate
+for _,a,_,_,_ in event_iterator:
+    policy.append(a)
+
+## console debug
+#print len(pi_current)
+ 
 # Instantiation of the Ordinary Least Squares class
 ols = linear_model.LinearRegression()
 
@@ -92,5 +105,21 @@ w_pi,_,_,_ = np.linalg.lstsq(A, b)
 
 print w_pi
 
+print "Improving Policy..."
+## One Time (Greedy) Policy Improvement
+idx = 0
+for s,_,_,_,_ in event_iterator:
+
+    # the state-action value for action 0.0
+    q0 = np.dot(np.append(s,0.0), w_pi)
+
+    # the state-action value for action 1.0
+    q1 = np.dot(np.append(s,1.0), w_pi)
+
+    # update the policy as argmax(action = {0.0, 1.0}) Q^
+    policy[idx] = 1.0 if q0 < q1 else 0.0
+
+    # to the next state
+    idx = idx+1    
 
 
