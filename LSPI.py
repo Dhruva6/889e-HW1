@@ -74,7 +74,7 @@ def ImprovePolicy(s, w_pi):
         value[idx] = max(q0, q1)
         
         # to the next state
-        idx = idx+1    
+        # idx = idx+1    
 
     return (policy, value)
 
@@ -101,9 +101,6 @@ def EvaluatePolicy(s, w_pi):
         # update the policy
         policy[idx] = True if q0 < q1 else False
         
-        # to the next state
-        idx = idx+1    
-
     return (policy, value)
 
 def LSPI(sars, current_pi, gamma):
@@ -188,11 +185,8 @@ if crossValidateGamma:
     # the mean values of each of the policy
     mean_policy_values = np.zeros((len(gamma),1))
 
-    # index for g
-    gIdx = 0
-    
     # iterate through all the elements of gamma
-    for g in gamma:
+    for gIdx, g in enumerate(gamma):
 
         print "Cross validating for gamma: {0:.3f}".format(g)
     
@@ -229,9 +223,6 @@ if crossValidateGamma:
         # console log
         print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
         
-        # tick over gIdx
-        gIdx = gIdx + 1
-
     # write the gamma values to the csv file
     with open("LSPI_gamma_CV.csv", "w") as out_file:
         out_file.write("# Gamma, Mean Policy Value\n")
