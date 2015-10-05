@@ -3,6 +3,7 @@
 
 # Solution to the first homework of Real life reinforcement learning
 import csv
+import math
 import numpy as np
 from sklearn import linear_model
 from Util import generate_sarsa
@@ -53,6 +54,9 @@ def ImprovePolicy(s, w_pi):
 
     # the new policy
     policy = np.zeros((len(s),1))
+
+    # the value of the improved policy
+    value = np.zeros((len(s),1)) 
     
     # iterate through every state, 
     for idx in range(0, len(s)):
@@ -65,10 +69,57 @@ def ImprovePolicy(s, w_pi):
         # update the policy as argmax(action = {0.0, 1.0}) Q^
         policy[idx] = 1.0 if q0 < q1 else 0.0
 
+        # update the value
+        value[idx] = max(q0, q1)
+        
         # to the next state
         idx = idx+1    
 
-    return policy
+    return (policy, value)
+
+def LSPI(sars, current_pi, gamma):
+    # the maximum number of iterations to run
+    maxIter = 50
+
+    # the current loop counter
+    iter = 1
+
+    # epsilon tolerance to terminate the policy improvement
+    eps = 1e-02;
+
+    # the initial weight vector
+    w_pi = np.zeros((10,1))
+
+    # loop
+    while iter < maxIter:
+
+        if 0 == iter%2:
+            print "Now at policy iteration #{}".format(iter)
+            
+        # Estimate the State-Action VF Approximation using LSTDQ
+        new_w_pi = LSTDQ(sars, current_pi, gamma)
+
+        # improve the policy
+        new_pi, new_value = ImprovePolicy(sars[:,0], w_pi)
+
+        # termination condition
+        if np.linalg.norm(new_w_pi - w_pi) < eps:
+            print "PI converged at iteration # {}".format(iter)
+            break
+            
+        # update current_pi
+        current_pi = new_pi
+
+        # update w_pi
+        w_pi = new_w_pi
+
+        # update current_value
+        current_value = new_value
+            
+        # update iter
+        iter = iter + 1
+
+    return (current_pi, w_pi, current_value)
 
 # prompt
 print "Reading file: generated_episodes_3000.csv"
@@ -77,59 +128,55 @@ print "Reading file: generated_episodes_3000.csv"
 with open('generated_episodes_3000.csv') as csv_file:
     data = np.array(list(csv.reader(csv_file))[1:])
 
-# Uncomment the next statement if you want to see what a row of the data looks like.
-#print data[0]
-
 # Generate the (s,a,r,s',a') tuple from data
 sarsa = np.array(generate_sarsa(data))
 
 # pull out the (s,a,r,s) tuple from sarsa
 sars = sarsa[:,0:4]
 
-#  the initial policy executed at s'
-current_pi = np.reshape(sarsa[:,4], (len(sars),1))
+# should we perform cross validation on gamma?
+crossValidateGamma = False
+#gamma = np.linspace(0.0, 1.0, 50, True)
+gamma = np.linspace(0.95, 1.0, 20, False)
 
-# Instantiation of the Ordinary Least Squares class
-ols = linear_model.LinearRegression()
+# cross-validate if requested
+if crossValidateGamma:
 
-#
-# LSPI loop
-#
-
-# the maximum number of iterations to run
-maxIter = 1e02
-
-# the current loop counter
-iter = 1
-
-# epsilon tolerance to terminate the policy improvement
-eps = 1e-02;
-
-# the initial weight vector
-w_pi = np.zeros((10,1))
-
-# loop
-while iter < maxIter:
-
-    if 0 == iter%2:
-        print "Now at policy iteration #{}".format(iter)
+    # the mean values of each of the policy
+    mean_policy_values = []
     
-    # Estimate the State-Action VF Approximation using LSTDQ
-    new_w_pi = LSTDQ(sars, current_pi)
+    # iterate through all the elements of gamma
+    for g in gamma:
 
-    # improve the policy
-    new_pi = ImprovePolicy(sars[:,0], w_pi)
+        print "Cross validating with gamma {}".format(g)
+        
+        #  the initial policy executed at s'
+        current_pi = np.reshape(sarsa[:,4], (len(sars),1))
 
-    # termination condition
-    if np.linalg.norm(new_w_pi - w_pi) < eps:
-        print "PI converged at iteration # {}".format(iter)
-        break
-    
-    # update current_pi
-    current_pi = new_pi
+        # LSPI
+        current_pi, w_pi, current_value = LSPI(sars, current_pi, g)
 
-    # update w_pi
-    w_pi = new_w_pi
-    
-    # update iter
-    iter = iter + 1
+        print "Mean value of the current policy: {}".format(np.mean(current_value))
+        
+        # add the mean value of the current policy
+        mean_policy_values.append(np.mean(current_value))
+
+    # write the gamma values to the csv file
+    with open("LSPI_gamma_CV.csv", "w") as out_file:
+        out_file.write("# Gamma, Mean Policy Value\n")
+        for i in range(len(gamma)):
+            out_string = "{0:.5f},{1:.5f}\n".format(gamma[i],mean_policy_values[i])
+            out_file.write(out_string)
+
+else: # just pick the gamma with the largest return
+
+    # gamma (from cross validation)
+    gamma = 0.9975
+
+    #  the initial policy executed at s'
+    current_pi = np.reshape(sarsa[:,4], (len(sars),1))
+
+    # LSPI
+    current_pi, w_pi, current_value = LSPI(sars, current_pi, gamma)
+
+    print "gamma: {0:.5f}, Mean Policy Value: {1:.5f}".format(gamma, np.mean(current_value))
