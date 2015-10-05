@@ -164,7 +164,7 @@ sarsa = np.array(generate_sarsa(data))
 sars = sarsa[:,0:4]
 
 # should we perform cross validation on gamma?
-crossValidateGamma = False
+crossValidateGamma = True
 #gamma = np.linspace(0.0, 1.0, 50, True)
 gamma = np.linspace(0.95, 1.0, 20, False)
 
@@ -224,8 +224,8 @@ if crossValidateGamma:
             cvTimes = cvTimes + 1
 
         # average over all the cross-validation times
-        mean_policy_values[gIdx] = mean_policy_values[gIdx]/float(maxCVTimes)
-
+        mean_policy_values[gIdx,0] = mean_policy_values[gIdx,0]/float(maxCVTimes)
+        
         # console log
         print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
         
@@ -236,7 +236,7 @@ if crossValidateGamma:
     with open("LSPI_gamma_CV.csv", "w") as out_file:
         out_file.write("# Gamma, Mean Policy Value\n")
         for i in range(len(gamma)):
-            out_string = "{0:.5f},{1:.5f}\n".format(gamma[i],mean_policy_values[i])
+            out_string = "{0:.5f},{1:.5f}\n".format(gamma[i],mean_policy_values[i,0])
             out_file.write(out_string)
 
 else: # just pick the gamma with the largest return
