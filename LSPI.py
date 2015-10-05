@@ -4,6 +4,7 @@
 # Solution to the first homework of Real life reinforcement learning
 import csv
 import math
+import random
 import numpy as np
 from sklearn import linear_model
 from Util import generate_sarsa
@@ -77,6 +78,34 @@ def ImprovePolicy(s, w_pi):
 
     return (policy, value)
 
+# Policy Evaluation at the given states
+def EvaluatePolicy(s, w_pi):
+  
+    # the value of the improved policy
+    value = np.zeros((len(s),1))
+
+    # the new policy
+    policy = [False] * len(s)
+
+    # iterate through every state, 
+    for idx in range(0, len(s)):
+        # the state-action value for action 0.0
+        q0 = np.dot(np.append(s[idx,0],0.0), w_pi)
+
+        # the state-action value for action 1.0
+        q1 = np.dot(np.append(s[idx,0],1.0), w_pi)
+
+        # update the value
+        value[idx] = max(q0, q1)
+
+        # update the policy
+        policy[idx] = True if q0 < q1 else False
+        
+        # to the next state
+        idx = idx+1    
+
+    return (policy, value)
+
 def LSPI(sars, current_pi, gamma):
     # the maximum number of iterations to run
     maxIter = 50
@@ -142,24 +171,66 @@ gamma = np.linspace(0.95, 1.0, 20, False)
 # cross-validate if requested
 if crossValidateGamma:
 
+    # the number of times to run the cross validation for a given gamma
+    maxCVTimes  = 5
+
+    # the number of folds
+    numFolds  = 10
+
+    # number of test elements
+    numTestElements = len(sars)/numFolds
+
+    # number of training elements
+    numTrainElements = len(sars) - numTestElements
+
+    print "Train Elements {}, Test Elements {}".format(numTrainElements, numTestElements)
+
     # the mean values of each of the policy
-    mean_policy_values = []
+    mean_policy_values = np.zeros((len(gamma),1))
+
+    # index for g
+    gIdx = 0
     
     # iterate through all the elements of gamma
     for g in gamma:
 
-        print "Cross validating with gamma {}".format(g)
-        
-        #  the initial policy executed at s'
-        current_pi = np.reshape(sarsa[:,4], (len(sars),1))
+        print "Cross validating for gamma: {0:.3f}".format(g)
+    
+        # the current loop counter
+        cvTimes = 0
 
-        # LSPI
-        current_pi, w_pi, current_value = LSPI(sars, current_pi, g)
+        # iterate 
+        while cvTimes < maxCVTimes:
 
-        print "Mean value of the current policy: {}".format(np.mean(current_value))
+            # get the training set rows
+            trainRows = random.sample(range(0,len(sars)), numTrainElements)
         
-        # add the mean value of the current policy
-        mean_policy_values.append(np.mean(current_value))
+            # the test set rows
+            testRows = list(set(range(0,len(sars))) - set(trainRows))
+        
+            #  the initial policy executed at s'
+            current_pi = np.reshape(sarsa[:,4], (len(sars),1))
+
+            # LSPI
+            _, w_pi,_ = LSPI(sars[trainRows,:], current_pi, g)
+        
+            # evaluate the policy at sars[testRows,:]
+            _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
+
+            # update the mean_policy_values for the current gamma
+            mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
+                
+            # tick over the counter
+            cvTimes = cvTimes + 1
+
+        # average over all the cross-validation times
+        mean_policy_values[gIdx] = mean_policy_values[gIdx]/float(maxCVTimes)
+
+        # console log
+        print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
+        
+        # tick over gIdx
+        gIdx = gIdx + 1
 
     # write the gamma values to the csv file
     with open("LSPI_gamma_CV.csv", "w") as out_file:
