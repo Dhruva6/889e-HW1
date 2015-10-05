@@ -43,7 +43,7 @@ def LSTDQ(sars, current_pi, gamma = 0.9):
         A = A + np.outer(phi_s, phi_s - gamma*phi_s_prime)
 
         # update B - we add to B, the feature vector scaled by the reward
-        b = b + sars[idx,2]*phi_s
+
 
     # compute the weights for the policy pi - solve the system A*w_pi = b
     w_pi,_,_,_ = np.linalg.lstsq(A, b)
@@ -126,7 +126,7 @@ def LSPI(sars, current_pi, gamma):
         new_w_pi = LSTDQ(sars, current_pi, gamma)
 
         # improve the policy
-        new_pi, new_value = ImprovePolicy(sars[:,0], w_pi)
+        new_pi, new_value = ImprovePolicy(sars[:,0], new_w_pi)
 
         # termination condition
         if np.linalg.norm(new_w_pi - w_pi) < eps:
