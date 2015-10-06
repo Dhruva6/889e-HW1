@@ -268,7 +268,7 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
                 _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
             # FVI
             else:
-                w_pi = np.reshape((model(fn, sars[trainRows,:], gamma=g)).coef_, (10, 1))
+                w_pi = (model(fn, sars[trainRows,:], gamma=g)).coef_
                 
             # evaluate the policy at sars[testRows,:]
             _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
