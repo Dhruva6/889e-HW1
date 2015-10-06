@@ -215,6 +215,7 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
             q0 = np.dot(computePhiRBF(s[idx], 0.0).T, w_pi)
             q1 = np.dot(computePhiRBF(s[idx], 1.0).T, w_pi)
         else:
+            print s[idx].shape
             q0 = np.dot(np.append(s[idx],0.0), w_pi)
             q1 = np.dot(np.append(s[idx],1.0), w_pi)
 
@@ -268,17 +269,16 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
                 _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
             # FVI
             else:
-                w_pi = (model(fn, sars[trainRows,:])).coef_
-                print w_pi
-
-                # evaluate the policy at sars[testRows,:]
-                _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
+                w_pi = np.reshape((model(fn, sars[trainRows,:])).coef_, (10, 1))
                 
-                # update the mean_policy_values for the current gamma
-                mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
+            # evaluate the policy at sars[testRows,:]
+            _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
                 
-                # tick over the counter
-                cvTimes = cvTimes + 1
+            # update the mean_policy_values for the current gamma
+            mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
+                
+            # tick over the counter
+            cvTimes = cvTimes + 1
         
         # average over all the cross-validation times
         mean_policy_values[gIdx,0] = mean_policy_values[gIdx,0]/float(maxCVTimes)
