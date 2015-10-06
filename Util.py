@@ -1,6 +1,7 @@
 # A collection of Utility functions - copied from Real\ life\ RL\ -\ HW1.py
 
 # Import
+import pickle
 import numpy as np
 from sklearn import preprocessing
 
@@ -36,6 +37,14 @@ def generate_sars(data):
     # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
     known_states = [state for state in get_known_states(data)]
     scaler = preprocessing.StandardScaler().fit(known_states)
+
+    #
+    # Serialize scaler
+    #
+    paramsOut = open("Scaler.pk1", 'wb')
+    pickle.dump(scaler, paramsOut, -1)
+    paramsOut.close()
+    
     event_length = 9 + 9 + 2
     state_length = 9 + 2
     num_states = 24
@@ -77,6 +86,14 @@ def generate_sarsa(data):
     # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
     known_states = [state for state in get_known_states(data)]
     scaler = preprocessing.StandardScaler().fit(known_states)
+
+    #
+    # Serialize scaler
+    #
+    paramsOut = open("Scaler.pk1", 'wb')
+    pickle.dump(scaler, paramsOut, -1)
+    paramsOut.close()
+    
     event_length = 9 + 9 + 2 + 1
     state_length = 9 + 2
     num_states = 24
@@ -110,3 +127,63 @@ def generate_sarsa(data):
                 sarsa.append([s, a, r, s_prime, a_prime])
             curr_state += 1
     return sarsa
+
+
+def get_test_states(data):
+    """
+        Returns just the states that we know, i.e. states without the 'NA' in the data fields.
+    """
+    event_length = 9
+    state_length = 9
+    num_states = 1
+    for episode in data:
+        # Start at the beginning and keep looking at a net length of len(s) + len(a) + len(r) + len(s') points
+        # Each time, we increment our start position by s+a+r = 11 points
+        curr_state = 0
+        while curr_state < num_states:
+            start_idx = curr_state * state_length
+            end_idx = start_idx + event_length
+            datum = episode[start_idx:end_idx]
+            try:
+                s = datum[:9].astype(np.float)
+                yield s
+            # There's a problem if a data field is 'NA' - Not entirely sure what do in that case so for now I'm just ignoring
+            # those data points
+            except ValueError:
+                pass    
+            curr_state += 1
+            
+def generate_test_states(data, scaler):
+    """
+        Function that returns the next (s) pair from the input data one by one every time you call it. Requires a 
+        scaler to have been computed so that we can approximate the vaues for the 'NA' pairs in the data.
+    """
+    # Get the known states
+    known_states = [state for state in get_known_states(data)]
+
+    event_length = 9
+    state_length = 9 
+    num_states = 1
+    test_s = []
+    for episode in data:
+        # Start at the beginning and keep looking at a net length of len(s)  points
+        # Each time, we increment our start position by s = 9 points
+        curr_state = 0
+        while curr_state < num_states:
+            start_idx = curr_state * state_length
+            end_idx = start_idx + event_length
+            datum = episode[start_idx:end_idx]
+            # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
+            try:
+                s = np.array(datum[:9].astype(np.float))
+                scaler.transform(s)
+                test_s.append([s])
+            # IF there was a value error it means there was a 'NA' field somewhere. 
+            except ValueError:
+                # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
+                # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
+                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                scaler.transform(s)
+                test_s.append([s])
+            curr_state += 1
+    return test_s
