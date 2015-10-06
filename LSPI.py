@@ -47,7 +47,7 @@ def LSTDQ(sars, current_pi, gamma = 0.9):
         A = A + phi_s * (phi_s - gamma * phi_s_prime).T
         
         # update B - we add to B, the feature vector scaled by the reward
-
+        b = b + sars[idx,2]*phi_s
 
     # compute the weights for the policy pi - solve the system A*w_pi = b
     w_pi,_,_,_ = np.linalg.lstsq(A, b)
@@ -118,6 +118,9 @@ def LSPI(sars, current_pi, gamma):
     # the initial weight vector
     w_pi = np.zeros((10,1))
 
+    # the current value for all state-action pairs 
+    current_value = np.zeros((len(sars),1))
+
     # loop
     while iter < maxIter:
 
@@ -126,6 +129,8 @@ def LSPI(sars, current_pi, gamma):
             
         # Estimate the State-Action VF Approximation using LSTDQ
         new_w_pi = LSTDQ(sars, current_pi, gamma)
+
+        print new_w_pi
 
         # improve the policy
         new_pi, new_value = ImprovePolicy(sars[:,0], new_w_pi)
