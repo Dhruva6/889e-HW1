@@ -15,7 +15,7 @@ def FVI(fn, sars, gamma = 0.5, tol = 0.01):
     # Lower bound for n_iters
     n_iters = (int)(math.log((tol*((1-gamma)**2))/(2.0*Br))/math.log(gamma))
 
-    if (n_iters > 20): n_iters = 20
+    if (n_iters > 2): n_iters = 2
     #n_iters = math.log(((tol*(1-gamma**2))/Br) - gamma)
     
     # Initialize the weights. Do one iteration to get things started

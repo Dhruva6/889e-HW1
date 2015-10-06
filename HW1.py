@@ -39,12 +39,13 @@ if options.testData == False:
     # First read in all the data from the file.
     with open(options.trainFile) as csv_file:
         data = np.array(list(csv.reader(csv_file))[1:])
-
+    
     # Generate the (s,a,r,s',a') tuple from data
     sarsa = np.array(generate_sarsa(data))
 
     # pull out the (s,a,r,s) tuple from sarsa
     sars = sarsa[:,0:4]
+#    elem_list = OMP_TD(sars, 6)
     if options.fn=="lstsq": 
         fn = linear_model.LinearRegression()
     else:
@@ -64,7 +65,7 @@ if options.testData == False:
         if options.model=="lspi":
             CrossValidate(LSPI, "lspi", gamma, sars, sarsa, current_pi)
         else:
-            CrossValidate(FVI, "fvi", gamma, sars, fn)
+            CrossValidate(FVI, "fvi", gamma, sars, fn=fn)
         
     else: # use gamma that was picked using the cross validation
 
@@ -76,11 +77,12 @@ if options.testData == False:
             # console log
             #  the initial policy executed at s'
             current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-            OMP_TD(sars, 6)
             current_pi, w_pi, current_value = LSPI(sars, current_pi, gamma)
         else:
-            print "Running FVI on *ALL* the training data with gamma {0:.3f}".format(gamma)
-            w_pi = (FVI(fn, sars)).get_params()
+            print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
+            w_pi = (FVI(fn, sars)).coef_
+            
+            #fvi_curr_pi = [EvaluatePolicy(s, w_pi)[0] for s in sarsa[:, 0]]
 
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
