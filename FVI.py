@@ -5,6 +5,7 @@ from sklearn import linear_model
 from sklearn import neighbors
 from Util import generate_sars
 from optparse import OptionParser
+import time
 
 def FVI(fn, sars, gamma = 0.5, tol = 0.01):
     """
@@ -14,8 +15,8 @@ def FVI(fn, sars, gamma = 0.5, tol = 0.01):
     Br = max([r for s, a,r, s_prime in sars])
     # Lower bound for n_iters
     n_iters = (int)(math.log((tol*((1-gamma)**2))/(2.0*Br))/math.log(gamma))
-
-    if (n_iters > 2): n_iters = 2
+    maxiters = 20
+    if (n_iters > maxiters): n_iters = maxiters
     #n_iters = math.log(((tol*(1-gamma**2))/Br) - gamma)
     
     # Initialize the weights. Do one iteration to get things started
@@ -30,7 +31,11 @@ def FVI(fn, sars, gamma = 0.5, tol = 0.01):
         Xs = []
         ys = []
         for s, a, r, s_prime in sars:
+            print "Timing comp:"
+            start = time.time()
             y = r + gamma * max(fn.predict(np.append(s_prime, 0.0)), fn.predict(np.append(s_prime, 1.0)))
+            end = time.time()
+            print end-start
             Xs.append(np.append(s, a))
             ys.append(y[0])
         fn.fit(Xs, ys)

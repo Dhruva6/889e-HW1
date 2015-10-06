@@ -49,14 +49,15 @@ if options.testData == False:
     if options.fn=="lstsq": 
         fn = linear_model.LinearRegression()
     else:
+        print "Using KNN for FVI"
         n_neighbours= options.nn
-        fn = neighbors.KNeighborsRegressor(n_neighbors, weights="distance")
+        fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
 
     # should we perform cross validation on gamma?
     if options.model=="lspi":
         gamma = np.linspace(0.95, 1.0, 20, False)
     else:
-        gamma = np.linspace(0.5, 1.0, 10, False)
+        gamma = np.linspace(0.8, 1.0, 10, False)
 
     # cross-validate if requested
     if options.crossValidateGamma == True:
