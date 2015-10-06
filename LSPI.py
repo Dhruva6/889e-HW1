@@ -90,34 +90,6 @@ def ImprovePolicy(s, w_pi, useRBFKernel = False):
         
     return (policy, value)
 
-# Policy Evaluation at the given states
-def EvaluatePolicy(s, w_pi, useRBFKernel = False):
-  
-    # the value of the improved policy
-    value = np.zeros((len(s),1))
-
-    # the new policy
-    policy = [False] * len(s)
-
-    # iterate through every state, 
-    for idx in range(len(s)):
-
-        # State-Action value function for actions 0.0 and 1.0
-        if useRBFKernel == True:
-            q0 = np.dot(computePhiRBF(s[idx], 0.0).T, w_pi)
-            q1 = np.dot(computePhiRBF(s[idx], 1.0).T, w_pi)
-        else:
-            q0 = np.dot(np.append(s[idx],0.0), w_pi)
-            q1 = np.dot(np.append(s[idx],1.0), w_pi)
-
-        # update the value
-        value[idx] = max(q0, q1)
-
-        # update the policy
-        policy[idx] = True if q1 > q0 else False
-        
-    return (policy, value)
-
 def LSPI(sars, current_pi, gamma, useRBFKernel = False):
     # the maximum number of iterations to run
     maxIter = 5
