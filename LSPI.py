@@ -130,8 +130,6 @@ def LSPI(sars, current_pi, gamma):
         # Estimate the State-Action VF Approximation using LSTDQ
         new_w_pi = LSTDQ(sars, current_pi, gamma)
 
-        print new_w_pi
-
         # improve the policy
         new_pi, new_value = ImprovePolicy(sars[:,0], new_w_pi)
 
