@@ -36,7 +36,8 @@ def generate_sars(data):
     """
     # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
     known_states = [state for state in get_known_states(data)]
-    scaler = preprocessing.StandardScaler().fit(known_states)
+    #scaler = preprocessing.StandardScaler().fit(known_states)
+    scaler = preprocessing.Normalizer().fit(known_states)
 
     #
     # Serialize scaler
@@ -70,9 +71,13 @@ def generate_sars(data):
             except ValueError:
                 # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
                 # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
-                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                #s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
                 scaler.transform(s)
-                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+#                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+
+                s_prime = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+
                 scaler.transform(s_prime).astype(np.float)
                 sars.append([s, a, r, s_prime])
             curr_state += 1
@@ -85,7 +90,8 @@ def generate_sarsa(data):
     """
     # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
     known_states = [state for state in get_known_states(data)]
-    scaler = preprocessing.StandardScaler().fit(known_states)
+    #scaler = preprocessing.StandardScaler().fit(known_states)
+    scaler = preprocessing.Normalizer().fit(known_states)
 
     #
     # Serialize scaler
@@ -111,19 +117,21 @@ def generate_sarsa(data):
             r = np.asscalar(datum[10:11].astype(np.float))
             try:
                 s = datum[:9].astype(np.float)
-                scaler.transform(s)
+                s = scaler.transform(s)
                 s_prime = datum[11:20].astype(np.float)
                 a_prime = 1.0 if datum[20:21] == 'true' else 0.0       
-                scaler.transform(s_prime)
+                s_prime = scaler.transform(s_prime)
                 sarsa.append([s, a, r, s_prime, a_prime])
             # IF there was a value error it means there was a 'NA' field somewhere. 
             except ValueError:
                 # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
                 # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
-                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                scaler.transform(s)
-                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                scaler.transform(s_prime).astype(np.float)
+#                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = scaler.transform(s)
+#                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s_prime = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s_prime = scaler.transform(s_prime).astype(np.float)
                 sarsa.append([s, a, r, s_prime, a_prime])
             curr_state += 1
     return sarsa
@@ -176,14 +184,15 @@ def generate_test_states(data, scaler):
             # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
             try:
                 s = np.array(datum[:9].astype(np.float))
-                scaler.transform(s)
-                test_s.append([s])
+                s = scaler.transform(s)
+                test_s.append(s)
             # IF there was a value error it means there was a 'NA' field somewhere. 
             except ValueError:
                 # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
                 # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
-                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                scaler.transform(s)
-                test_s.append([s])
+#                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = scaler.transform(s)
+                test_s.append(s)
             curr_state += 1
     return test_s
