@@ -47,7 +47,7 @@ def LSTDQ(sars, current_pi, gamma = 0.9):
         A = A + phi_s * (phi_s - gamma * phi_s_prime).T
         
         # update B - we add to B, the feature vector scaled by the reward
-        b = b + sars[idx,2]*phi_s
+
 
     # compute the weights for the policy pi - solve the system A*w_pi = b
     w_pi,_,_,_ = np.linalg.lstsq(A, b)
@@ -207,12 +207,9 @@ if options.testData == False:
 
         # the mean values of each of the policy
         mean_policy_values = np.zeros((len(gamma),1))
-
-        # index for g
-        gIdx = 0
-            
+        
         # iterate through all the elements of gamma
-        for g in gamma:
+        for gIdx, g in enumerate(gamma):
 
             print "Cross validating for gamma: {0:.3f}".format(g)
             
@@ -251,8 +248,6 @@ if options.testData == False:
             # console log
             print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
                 
-            # tick over gIdx
-            gIdx = gIdx + 1
 
         # write the gamma values to the csv file
         with open("LSPI_gamma_CV.csv", "w") as out_file:
@@ -276,7 +271,7 @@ if options.testData == False:
 
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
-        
+
         # dump the weight and the gamma to disk
         paramsOut = open(options.paramsFile, 'wb')
         pickle.dump(gamma, paramsOut, -1)
