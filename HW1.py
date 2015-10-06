@@ -4,6 +4,7 @@ from optparse import OptionParser
 from LSPI import *
 from FVI import *
 from Util import *
+from OMP import *
 
 #
 # command line options
@@ -32,7 +33,6 @@ parser.add_option("--nn", action="store", type="int", dest="nn", default="5", he
 
 # if configured to NOT test
 if options.testData == False:
-    
     # prompt
     print "Reading file: " + options.trainFile
 
@@ -74,10 +74,9 @@ if options.testData == False:
         if options.model == "lspi":
             # LSPI
             # console log
-            print "Running LSPI on *ALL* the training data with gamma {0:.3f}".format(gamma)      
             #  the initial policy executed at s'
             current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-
+            OMP_TD(sars, 100)
             current_pi, w_pi, current_value = LSPI(sars, current_pi, gamma)
         else:
             print "Running FVI on *ALL* the training data with gamma {0:.3f}".format(gamma)
@@ -121,6 +120,3 @@ else :
 
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi)
-
-
-
