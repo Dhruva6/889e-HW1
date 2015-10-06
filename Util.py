@@ -4,6 +4,7 @@
 import pickle
 import numpy as np
 from sklearn import preprocessing
+import random
 
 def get_known_states(data):
     """
@@ -196,3 +197,69 @@ def generate_test_states(data, scaler):
                 test_s.append(s)
             curr_state += 1
     return test_s
+
+def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=None):
+    # the number of times to run the cross validation for a given gamma
+    maxCVTimes  = 5
+
+    # the number of folds
+    numFolds  = 10
+    
+    # number of test elements
+    numTestElements = len(sars)/numFolds
+    
+    # number of training elements
+    numTrainElements = len(sars) - numTestElements
+    
+    print "Train Elements {}, Test Elements {}".format(numTrainElements, numTestElements)
+
+    # the mean values of each of the policy
+    mean_policy_values = np.zeros((len(gamma),1))
+        
+    # iterate through all the elements of gamma
+    for gIdx, g in enumerate(gamma):
+        
+        print "Cross validating for gamma: {0:.3f}".format(g)
+        
+        # the current loop counter
+        cvTimes = 0
+        
+        # iterate 
+        while cvTimes < maxCVTimes:
+            
+            print "now performing CV # {}".format(cvTimes+1)
+    
+            # get the training set rows
+            trainRows = random.sample(range(0,len(sars)), numTrainElements)
+                
+            # the test set rows
+            testRows = list(set(range(0,len(sars))) - set(trainRows))
+                
+            # LSPI
+            if model_name == "lspi":
+                _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
+            # FVI
+            else:
+                w_pi = (model(fn, sars[trainRows,:])).get_params()
+                
+                # evaluate the policy at sars[testRows,:]
+                _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
+                
+                # update the mean_policy_values for the current gamma
+                mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
+                
+                # tick over the counter
+                cvTimes = cvTimes + 1
+        
+        # average over all the cross-validation times
+        mean_policy_values[gIdx,0] = mean_policy_values[gIdx,0]/float(maxCVTimes)
+        
+        # console log
+        print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
+
+        # write the gamma values to the csv file
+        with open(model+"_gamma_CV.csv", "w") as out_file:
+            out_file.write("# Gamma, Mean Policy Value\n")
+            for i in range(len(gamma)):
+                out_string = "{0:.5f},{1:.5f}\n".format(gamma[i],mean_policy_values[i,0])
+                out_file.write(out_string)

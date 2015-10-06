@@ -169,7 +169,6 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
 
     return (current_pi, w_pi, current_value)
 
-
 def computePhiRBF(s, a):
 
     # 3 kernels per dimension, centered at mu
@@ -363,5 +362,3 @@ else :
 
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi, options.useRBFKernel)
-
-    print w_pi
