@@ -76,7 +76,7 @@ if options.testData == False:
             # console log
             #  the initial policy executed at s'
             current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-            OMP_TD(sars, 100)
+            OMP_TD(sars, 6)
             current_pi, w_pi, current_value = LSPI(sars, current_pi, gamma)
         else:
             print "Running FVI on *ALL* the training data with gamma {0:.3f}".format(gamma)
