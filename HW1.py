@@ -63,7 +63,7 @@ if options.testData == False:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
         if options.model=="lspi":
-            CrossValidate(LSPI, "lspi", gamma, sars, sarsa, current_pi)
+            CrossValidate(LSPI, "lspi", gamma, sars, sarsa=sarsa, current_pi=current_pi)
         else:
             CrossValidate(FVI, "fvi", gamma, sars, fn=fn)
         

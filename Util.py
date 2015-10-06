@@ -215,9 +215,8 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
             q0 = np.dot(computePhiRBF(s[idx], 0.0).T, w_pi)
             q1 = np.dot(computePhiRBF(s[idx], 1.0).T, w_pi)
         else:
-            print s[idx].shape
-            q0 = np.dot(np.append(s[idx],0.0), w_pi)
-            q1 = np.dot(np.append(s[idx],1.0), w_pi)
+            q0 = np.dot(np.append(s[idx, 0],0.0), w_pi)
+            q1 = np.dot(np.append(s[idx, 0],1.0), w_pi)
 
         # update the value
         value[idx] = max(q0, q1)
@@ -269,7 +268,7 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
                 _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
             # FVI
             else:
-                w_pi = np.reshape((model(fn, sars[trainRows,:])).coef_, (10, 1))
+                w_pi = np.reshape((model(fn, sars[trainRows,:], gamma=g)).coef_, (10, 1))
                 
             # evaluate the policy at sars[testRows,:]
             _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
@@ -287,7 +286,7 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
         print "Mean policy value for test set: {0:.2f}".format(mean_policy_values[gIdx,0])
 
         # write the gamma values to the csv file
-        with open(model+"_gamma_CV.csv", "w") as out_file:
+        with open(model_name+"_gamma_CV.csv", "w") as out_file:
             out_file.write("# Gamma, Mean Policy Value\n")
             for i in range(len(gamma)):
                 out_string = "{0:.5f},{1:.5f}\n".format(gamma[i],mean_policy_values[i,0])
