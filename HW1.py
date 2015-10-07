@@ -25,6 +25,7 @@ parser.add_option("-t", action="store_true", dest="testData", help="Test on give
 parser.add_option("-f", action="store", type="string", dest="trainFile", help="CSV Training data file name[default=generated_episodes_3000.csv]", default="generated_episodes_3000.csv")
 parser.add_option("-p", action="store", type="string", dest="paramsFile", help="File with parameters from training[default=params.pk1]", default="params.pk1")
 parser.add_option("-s", action="store", type="string", dest="testFile", help="CSV Test data file name[default=testData.csv]", default="testData.csv")
+parser.add_option("-o", action="store_true", dest="OMP", help="Run feature selection with OMP-TD[default=False]", default=False)
 
 #
 # FVI options
@@ -51,7 +52,7 @@ else:
     fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
 
 # OMPTD - hacked in.  This should come from calling the OMP-TD method
-OMPTDFeatS = [0, 4, 5, 6, 7]
+#OMPTDFeatS = [0, 4, 5, 6, 7]
 
 # if configured to NOT test
 if options.testData == False:
@@ -65,27 +66,30 @@ if options.testData == False:
     # SARSA samples 
     sarsa, numFeat = generateSARSASamples(data)
 
-    # features to pull out from s'
-    OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
-    
-    # create a boolean mask
-    mask = np.zeros((numFeat*2)+3, dtype=bool)
-    mask[OMPTDFeatS] = True
-    mask[numFeat] = True
-    mask[numFeat+1] = True
-    mask[OMPTDFeatSPrime] = True
-    mask[-1] = True
-
-    print mask
-    
-    # mask out the features that are not relelvant
-    sarsa = sarsa[:, mask]
-
-    # Modify numFeat 
-    numFeat = len(OMPTDFeatS)
-
-    # update SARS
+    # Update SARS
     sars = sarsa[:,0:-1]
+
+    if options.OMP:
+        OMPTDFeatS =  OMP.OMP_TD(sars, 10000, 0.95)
+
+        #  features to pull out from s'
+        OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
+    
+        # create a boolean mask
+        mask = np.zeros((numFeat*2)+3, dtype=bool)
+        mask[OMPTDFeatS] = True
+        mask[numFeat] = True
+        mask[numFeat+1] = True
+        mask[OMPTDFeatSPrime] = True
+        mask[-1] = True
+        
+        print mask
+    
+        # mask out the features that are not relelvant
+        sarsa = sarsa[:, mask]
+
+        # Modify numFeat 
+        numFeat = len(OMPTDFeatS)
 
     # should we perform cross validation on gamma?
     if options.model=="lspi":
@@ -152,25 +156,29 @@ else :
     # generate the test states from data
     test_s, numFeat = generateSARSASamples(data, True)
 
-    # features to pull out from s'
-    OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
-    
-    # create a boolean mask
-    mask = np.zeros((numFeat*2)+3, dtype=bool)
-    mask[OMPTDFeatS] = True
-    mask[numFeat] = True
-    mask[numFeat+1] = True
-    mask[OMPTDFeatSPrime] = True
-    mask[-1] = True
-    
-    # mask out the features that are not relelvant
-    test_s = test_s[:, mask]
+    if options.OMP:
+        # From when we trained
+        OMPTDFeatS =  [0, 1, 4, 6, 7]
 
-    # Modify numFeat 
-    numFeat = len(OMPTDFeatS)
+        # features to pull out from s'
+        OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
+        
+        # create a boolean mask
+        mask = np.zeros((numFeat*2)+3, dtype=bool)
+        mask[OMPTDFeatS] = True
+        mask[numFeat] = True
+        mask[numFeat+1] = True
+        mask[OMPTDFeatSPrime] = True
+        mask[-1] = True
+
+        # mask out the features that are not relelvant
+        test_s = test_s[:, mask]
+        
+        # Modify numFeat 
+        numFeat = len(OMPTDFeatS)
     
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi, numFeat)
 
-    print "Num states: {}, num true: {}".format(len(test_s), sum(policy))
+    print "Num states: {}, num true: {}, value: {}".format(len(test_s), sum(policy), np.mean(value))
 

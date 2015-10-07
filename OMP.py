@@ -10,15 +10,14 @@ def OMP_TD(sars, beta, gamma = 0.99):
     j = 0
     n = len(sars)
     
-    phi_s = np.array([np.array(elem) for elem in sars[:,0]])
+    phi_s = sars[:, 0:k]
     phi_s = np.reshape(phi_s, (n, k))
 
-    phi_s_prime = np.array([np.array(elem) for elem in sars[:,3]])
+    phi_s_prime = sars[:, k+2:k+2+k]
     phi_s_prime = np.reshape(phi_s_prime, (n, k))
 
-    R = np.array(sars[:, 2])
-    beta = 10**6
-    c[0] = beta+1
+    R = np.array(sars[:, k+1])
+
     while(len(I) < numFeat):# or c[j] > beta):
         #c = np.linalg.norm(np.dot(phi_s.T, (R + gamma * np.dot(phi_s_prime, w_pi) - np.dot(phi_s, w_pi))))/n
         temp = (gamma * np.dot(phi_s_prime, w_pi) - np.dot(phi_s, w_pi))
@@ -37,12 +36,8 @@ def OMP_TD(sars, beta, gamma = 0.99):
         for i, idx in enumerate(lI):
             new_w_pi[idx] = w_pi[i]
         w_pi = new_w_pi
+
     print "Finished OMP-TD"
-    elemList = []
-    for idx, elem in enumerate(w_pi):
-        if elem > 0:
-            elemList.append(idx)
-    print elemList
-    return elemList
+    return list(I)
             
         
