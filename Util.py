@@ -139,7 +139,7 @@ def generate_test_states(data, scaler):
                 # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
                 # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
 #                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
                 s = scaler.transform(s)
                 test_s.append(s)
             curr_state += 1

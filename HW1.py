@@ -9,6 +9,7 @@ import numpy as np
 import csv
 from sklearn import linear_model
 from sklearn import neighbors
+import pickle
 
 #
 # command line options
@@ -94,6 +95,7 @@ if options.testData == False:
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
 
+        print w_pi
         # dump the weight and the gamma to disk
         paramsOut = open(options.paramsFile, 'wb')
         pickle.dump(gamma, paramsOut, -1)
@@ -129,3 +131,8 @@ else :
 
     # evaluate the policy
     policy, value = Util.EvaluatePolicy(test_s, w_pi)
+    print "Evaluated Policy -", len(policy)
+    for elem in policy:
+        if not elem:
+            print "There was a false elem as well"
+            break
