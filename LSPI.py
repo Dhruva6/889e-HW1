@@ -21,7 +21,7 @@ from optparse import OptionParser
 def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False):
 
     # at present, our basis is R^d - where d is 9 (features) + 1 (action)
-    k = 10
+    k = len(sars[0][0])+1
 
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
@@ -100,12 +100,14 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
     # epsilon tolerance to terminate the policy improvement
     eps = 1e-02;
 
+    k = len(sars[0][0])+1
+
     # the initial weight vector
     if useRBFKernel == True:
         phi = computePhiRBF(sars[0,0], 0.0)
         w_pi = np.zeros((len(phi),1))
     else:
-        w_pi = np.zeros((10,1))
+        w_pi = np.zeros((k,1))
 
     # the current value for all state-action pairs 
     current_value = np.zeros((len(sars),1))

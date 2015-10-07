@@ -21,6 +21,7 @@ parser.add_option("-m", action="store", type="string", dest="model", default="ls
 parser.add_option("-v", action="store_true", dest="crossValidateGamma", default=False, help="Run Cross Validation on gamma[default=False]")
 #parser.add_option("-l", action="store_true", dest="loadWeights", help="Load weights from training[default=False]", default=False)
 parser.add_option("-t", action="store_true", dest="testData", help="Test on given data[default=False]", default=False)
+parser.add_option("-o", action="store_true", dest="OMP", help="Run OMP_TD[default=False", default=False)
 
 parser.add_option("-f", action="store", type="string", dest="trainFile", help="CSV Training data file name[default=generated_episodes_3000.csv]", default="generated_episodes_3000.csv")
 parser.add_option("-p", action="store", type="string", dest="paramsFile", help="File with parameters from training[default=params.pk1]", default="params.pk1")
@@ -64,7 +65,7 @@ if options.testData == False:
 
     # pull out the (s,a,r,s) tuple from sarsa
     sars = sarsa[:,0:4]
-
+    
     # should we perform cross validation on gamma?
     if options.model=="lspi":
         gamma = np.linspace(0.95, 1.0, 20, False)
@@ -82,6 +83,17 @@ if options.testData == False:
         # gamma (from cross validation)
         gamma = 0.9975
 
+        if options.OMP:
+            print "Running OMP-TD and extracting 5 features"
+            elemList = OMP.OMP_TD(sars, 100000, gamma)
+            new_sarsa = []
+            for s, a, r, s_prime, a_prime in sarsa:
+                new_s = s[0][elemList]
+                new_s_prime = s_prime[0][elemList]
+                new_sarsa.append([new_s, a, r, new_s_prime, a_prime])
+            sarsa = np.array(new_sarsa)
+            sars = sarsa[:, 0:4]
+
         if options.model == "lspi":
             # LSPI
             # console log
@@ -95,7 +107,6 @@ if options.testData == False:
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
 
-        print w_pi
         # dump the weight and the gamma to disk
         paramsOut = open(options.paramsFile, 'wb')
         pickle.dump(gamma, paramsOut, -1)

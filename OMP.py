@@ -1,7 +1,6 @@
 import numpy as np
 
 def OMP_TD(sars, beta, gamma = 0.99):
-    print "Started OMP-TD"
     k = 9
     numFeat = 5
     I = set()
@@ -17,8 +16,6 @@ def OMP_TD(sars, beta, gamma = 0.99):
     phi_s_prime = np.reshape(phi_s_prime, (n, k))
 
     R = np.array(sars[:, 2])
-    beta = 10**6
-    c[0] = beta+1
     while(len(I) < numFeat):# or c[j] > beta):
         #c = np.linalg.norm(np.dot(phi_s.T, (R + gamma * np.dot(phi_s_prime, w_pi) - np.dot(phi_s, w_pi))))/n
         temp = (gamma * np.dot(phi_s_prime, w_pi) - np.dot(phi_s, w_pi))
@@ -42,7 +39,6 @@ def OMP_TD(sars, beta, gamma = 0.99):
     for idx, elem in enumerate(w_pi):
         if elem > 0:
             elemList.append(idx)
-    print elemList
     return elemList
             
         
