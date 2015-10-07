@@ -19,7 +19,7 @@ def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
 
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
-        phi = computePhiRBF(sars[0,0:numFeat], 0.0)
+        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], 0.0)
         k = len(phi)
         
     # to avoid singularities, we start off A with a small delta along the diagonal
@@ -46,7 +46,8 @@ def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
         phi_s_prime = np.zeros((k,1))
                 
         if useRBFKernel == True:
-            assert False
+            phi_s = computePhiRBF(kernelMu, numFeat, sars[idx,0:aIdx], sars[idx,aIdx])
+            phi_s_prime = computePhiRBF(kernelMu, numFeat, sars[idx,spIdx:spIdxEnd],current_pi[idx] )
         else:
 
             # where to place our features for phi
@@ -89,20 +90,21 @@ def ImprovePolicy(s, w_pi, numFeat, useRBFKernel = False):
 
         # State-Action value function for actions 0.0 and 1.0
         if useRBFKernel == True:
-            assert False
+            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1)
+            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1)
         else:
             q0 = np.dot(phi_s, w_pi)
             q1 = np.dot(phi_s_prime, w_pi)
 
-        # update the policy as argmax(action = {0.0, 1.0}) Q^
-        policy[idx] = 1.0 if q1 > q0 else 0.0
+        # update the policy as argmax(action = {-1.0, 1.0}) Q^
+        policy[idx] = 1.0 if q1 > q0 else -1.0
 
         # update the value
         value[idx] = max(q0, q1)
         
     return (policy, value)
 
-def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
+def LSPI(sars, current_pi, numFeat, gamma, kernelMu, useRBFKernel = False):
     # the maximum number of iterations to run
     maxIter = 5
 
@@ -112,12 +114,9 @@ def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
     # epsilon tolerance to terminate the policy improvement
     eps = 1e-02;
 
-    
     # the initial weight vector
-    if useRBFKernel == True:
-
-        
-        phi = computePhiRBF(sars[0,0:numFeat], 0.0)
+    if useRBFKernel == True:        
+        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], 0.0)
         w_pi = np.zeros((len(phi),1))
     else:
         w_pi = np.zeros((2*numFeat,1))
@@ -156,16 +155,13 @@ def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
 
     return (current_pi, w_pi, current_value)
 
-def computePhiRBF(s, a):
-
-    # 3 kernels per dimension, centered at mu
-    mu_kernels = [0.0, 0.5, 0.75]
+def computePhiRBF(kernelMu, numFeat, s,a):
 
     # the phi
     phi = np.zeros((2*(len(s) * len(mu_kernels) + 1), 1))
 
     # start counter
-    idx = 0 if a == 0.0 else len(s)*len(mu_kernels)+1
+    idx = 0 if a == -1.0 else len(s)*len(mu_kernels)+1
     
     # constant basis
     phi[idx] = 1.0
@@ -174,12 +170,12 @@ def computePhiRBF(s, a):
     idx = idx+1
 
     # for each dimension in the state 
-    for dim in range(len(s)):
+    for dim in range(numFeat):
 
         # for each mu in the kernel
-        for mu in mu_kernels:
+        for mu in kernelMu[dim]:
 
-            phi[idx] = math.exp(-0.5 * (s[dim] - mu) **2)
+            phi[idx] = math.exp(-0.5 * (s[0,dim] - mu) **2)
             
             # to the next entry
             idx = idx+1

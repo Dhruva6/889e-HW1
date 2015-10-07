@@ -189,7 +189,7 @@ def generateSARSASamples(data, testData = False):
 
 
 # Policy Evaluation at the given states
-def EvaluatePolicy(s, w_pi, numFeat, useRBFKernel = False):
+def EvaluatePolicy(s, w_pi, numFeat, kernelMu, useRBFKernel = False):
   
     # the value of the improved policy
     value = np.zeros((len(s),1))
@@ -209,7 +209,8 @@ def EvaluatePolicy(s, w_pi, numFeat, useRBFKernel = False):
 
         # State-Action value function for actions 0.0 and 1.0
         if useRBFKernel == True:
-            assert False
+            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1)
+            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1)       
         else:
             q0 = np.dot(phi_s, w_pi)
             q1 = np.dot(phi_s_prime, w_pi)
@@ -222,7 +223,7 @@ def EvaluatePolicy(s, w_pi, numFeat, useRBFKernel = False):
         
     return (policy, value)
 
-def CrossValidate(model, model_name, numFeat, gamma, sars, sarsa=[], current_pi=[], fn=None):
+def CrossValidate(model, model_name, numFeat, gamma, sars, kernelMu, sarsa=[], current_pi=[], fn=None):
     # the number of times to run the cross validation for a given gamma
     maxCVTimes  = 5
 
@@ -261,13 +262,13 @@ def CrossValidate(model, model_name, numFeat, gamma, sars, sarsa=[], current_pi=
                 
             # LSPI
             if model_name == "lspi":
-                _, w_pi,_ = model(sars[trainRows,:], current_pi, numFeat, g)
+                _, w_pi,_ = model(sars[trainRows,:], current_pi, numFeat, g, kernelMu)
             # FVI
             else:
                 w_pi = (model(fn, sars[trainRows,:], numFeat, gamma=g)).coef_
                 
             # evaluate the policy at sars[testRows,:]
-            _,values = EvaluatePolicy(sars[testRows,0:numFeat], w_pi, numFeat)
+            _,values = EvaluatePolicy(sars[testRows,0:numFeat], w_pi, numFeat, kernelMu)
                 
             # update the mean_policy_values for the current gamma
             mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)

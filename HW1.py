@@ -51,7 +51,7 @@ else:
     fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
 
 # OMPTD - hacked in.  This should come from calling the OMP-TD method
-OMPTDFeatS = [0, 4, 5, 6, 7]
+OMPTDFeatS = [0, 1, 4, 6, 7]
 
 # if configured to NOT test
 if options.testData == False:
@@ -97,7 +97,7 @@ if options.testData == False:
     if options.crossValidateGamma == True:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-        CrossValidate(model, options.model, numFeat, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
+        CrossValidate(model, options.model, numFeat, gamma, sars, kernelMu, sarsa=sarsa, current_pi=current_pi, fn=fn)
         
     else: # use gamma that was picked using the cross validation
 
@@ -108,13 +108,13 @@ if options.testData == False:
             # LSPI
             #  the initial policy executed at s'
             current_pi = sarsa[:,-1]
-            current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma)
+            current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma, kernelMu)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
             w_pi = (model(fn, sars, numFeat)).coef_
             current_pi = []
             current_value = []
-            current_pi, current_value = EvaluatePolicy(sars[:, 0:numFeat], w_pi, numFeat)
+            current_pi, current_value = EvaluatePolicy(sars[:, 0:numFeat], w_pi, numFeat, kernelMu)
             
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
@@ -170,7 +170,7 @@ else :
     numFeat = len(OMPTDFeatS)
     
     # evaluate the policy
-    policy, value = EvaluatePolicy(test_s, w_pi, numFeat)
+    policy, value = EvaluatePolicy(test_s, w_pi, numFeat, kernelMu)
 
     print "Num states: {}, num true: {}".format(len(test_s), sum(policy))
 
