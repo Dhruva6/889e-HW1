@@ -111,7 +111,10 @@ if options.testData == False:
             current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
-            w_pi = (model(fn, sars)).coef_
+            w_pi = (model(fn, sars, numFeat)).coef_
+            current_pi = []
+            current_value = []
+            current_pi, current_value = EvaluatePolicy(sars[:, 0:numFeat], w_pi, numFeat)
             
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile

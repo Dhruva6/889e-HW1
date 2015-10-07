@@ -220,10 +220,10 @@ def CrossValidate(model, model_name, numFeat, gamma, sars, sarsa=[], current_pi=
                 _, w_pi,_ = model(sars[trainRows,:], current_pi, numFeat, g)
             # FVI
             else:
-                w_pi = (model(fn, sars[trainRows,:], gamma=g)).coef_
+                w_pi = (model(fn, sars[trainRows,:], numFeat, gamma=g)).coef_
                 
             # evaluate the policy at sars[testRows,:]
-            _,values = EvaluatePolicy(sars[testRows,0:1], w_pi, numFeat)
+            _,values = EvaluatePolicy(sars[testRows,0:numFeat], w_pi, numFeat)
                 
             # update the mean_policy_values for the current gamma
             mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
