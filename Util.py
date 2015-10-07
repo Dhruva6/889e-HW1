@@ -124,7 +124,44 @@ def generateSARSASamples(data, testData = False):
         sarsa[:,numFeat+1:numFeat+2] = r
         sarsa[:,-1] = np.array(nextAction)
 
-        return sarsa, numFeat
+        #
+        # here, we compute the kernels as well
+        #
+        offset = numFeat+2
+        minS = sarsa[:,0:numFeat].min(axis=0).reshape((1,numFeat))
+        minSp = sarsa[:,offset:offset+numFeat].min(axis=0).reshape((1,numFeat))
+        minRange = np.vstack((minS, minSp)).min(axis=0).reshape((1,numFeat))
+    
+        maxS = sarsa[:,0:numFeat].max(axis=0).reshape((1,numFeat))
+        maxSp = sarsa[:,offset:offset+numFeat].max(axis=0).reshape((1,numFeat))
+        maxRange = np.vstack((maxS, maxSp)).max(axis=0).reshape((1,numFeat))
+
+        # the location of the kernels will vary by the minRange and maxRange
+        kernelRanges = np.vstack((minRange, maxRange)).reshape((numFeat,2))
+        
+        # the number of kernels per dimension
+        numKernels = 3
+
+        # the mean value for kernels
+        kernelMu = np.zeros((numFeat, numKernels))
+
+        # force the kernels to lie half way between min range and 0
+        # at 0 and one half way between 0 and max range
+        for idx in range(0,numFeat):
+            kernelMu[idx, 0] = kernelRanges[idx,0]/2.0
+            kernelMu[idx, 1] = 0.0
+            kernelMu[idx, 2] = kernelRanges[idx,1]/2.0
+
+        #
+        # serialize the kernel means
+        #
+
+        paramsOut = open("RBFKernel.pk1", 'wb')
+        pickle.dump(kernelMu, paramsOut, -1)
+        paramsOut.close()
+        
+        
+        return sarsa, numFeat, kernelMu
     else:
 
         #
@@ -133,6 +170,13 @@ def generateSARSASamples(data, testData = False):
         scalerIn = open('Scaler.pk1', 'rb')
         stateNormalizer = pickle.load(scalerIn)
         scalerIn.close()
+
+        #
+        # De-serialize kernelMu
+        #
+        kernelIn = open('RBFKernel.pk1')
+        kernelMu = pickle.load(kernelIn)
+        kernelIn.close()
 
         states = []
         for s, numFeat in getValidStates(data, testData):
