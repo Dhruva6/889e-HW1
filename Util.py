@@ -5,148 +5,147 @@ import pickle
 import numpy as np
 from sklearn import preprocessing
 import random
-
-def get_known_states(data):
+            
+def getValidStates(data, testData = False):
     """
         Returns just the states that we know, i.e. states without the 'NA' in the data fields.
     """
-    event_length = 9 + 9 + 2
-    state_length = 9 + 2
-    num_states = 24
-    for episode in data:
-        # Start at the beginning and keep looking at a net length of len(s) + len(a) + len(r) + len(s') points
-        # Each time, we increment our start position by s+a+r = 11 points
-        curr_state = 0
-        while curr_state < num_states:
-            start_idx = curr_state * state_length
-            end_idx = start_idx + event_length
-            datum = episode[start_idx:end_idx]
-            try:
-                s = datum[:9].astype(np.float)
-                yield s
-            # There's a problem if a data field is 'NA' - Not entirely sure what do in that case so for now I'm just ignoring
-            # those data points
-            except ValueError:
-                pass    
-            curr_state += 1
-            
 
-def generate_sarsa(data):
-    """
-        Function that returns the next (s, a, r, s', a') pair from the input data one by one every time you call it. Requires a 
-        scaler to have been computed so that we can approximate the vaues for the 'NA' pairs in the data.
-    """
-    # Compute the known states and then compute a 'scaler' which stores the means and variances that will be used for standardization.
-    known_states = [state for state in get_known_states(data)]
-    #scaler = preprocessing.StandardScaler().fit(known_states)
-    scaler = preprocessing.Normalizer().fit(known_states)
+    # the number of features describing the state
+    numFeat = 9
 
-    #
-    # Serialize scaler
-    #
-    paramsOut = open("Scaler.pk1", 'wb')
-    pickle.dump(scaler, paramsOut, -1)
-    paramsOut.close()
+    # the total number of fields associated with a state (numFeat + 1 reward + 1 action)
+    sarLength = numFeat + 2
     
-    event_length = 9 + 9 + 2 + 1
-    state_length = 9 + 2
-    num_states = 24
-    sarsa = []
+    # the total number of state, action, rewards per trajectory
+    numSARPerEpisode = 24 if testData == False else 1
+
     for episode in data:
         # Start at the beginning and keep looking at a net length of len(s) + len(a) + len(r) + len(s') points
         # Each time, we increment our start position by s+a+r = 11 points
-        curr_state = 0
-        while curr_state < num_states:
-            start_idx = curr_state * state_length
-            end_idx = start_idx + event_length
-            datum = episode[start_idx:end_idx]
-            # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
-            a = 1.0 if datum[9:10]=='true' else 0.0
-            r = np.asscalar(datum[10:11].astype(np.float))
-            a_prime = 1.0 if datum[20:21] == 'true' else 0.0
-            try:
-                s = datum[:9].astype(np.float)
-                s = scaler.transform(s)
-                s_prime = datum[11:20].astype(np.float)
-                s_prime = scaler.transform(s_prime)
-                sarsa.append([s, a, r, s_prime, a_prime])
-            # IF there was a value error it means there was a 'NA' field somewhere. 
-            except ValueError:
-                # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
-                # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
-#                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = scaler.transform(s)
-#                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s_prime = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s_prime = scaler.transform(s_prime).astype(np.float)
-                sarsa.append([s, a, r, s_prime, a_prime])
-            curr_state += 1
-    return sarsa
-
-
-def get_test_states(data):
-    """
-        Returns just the states that we know, i.e. states without the 'NA' in the data fields.
-    """
-    event_length = 9
-    state_length = 9
-    num_states = 1
-    for episode in data:
-        # Start at the beginning and keep looking at a net length of len(s) + len(a) + len(r) + len(s') points
-        # Each time, we increment our start position by s+a+r = 11 points
-        curr_state = 0
-        while curr_state < num_states:
-            start_idx = curr_state * state_length
-            end_idx = start_idx + event_length
-            datum = episode[start_idx:end_idx]
-            try:
-                s = datum[:9].astype(np.float)
-                yield s
-            # There's a problem if a data field is 'NA' - Not entirely sure what do in that case so for now I'm just ignoring
-            # those data points
-            except ValueError:
-                pass    
-            curr_state += 1
+        sarCount = 0
+        
+        while sarCount < numSARPerEpisode:
+            startIdx = sarCount * sarLength
+            endIdx = startIdx + (2 * sarLength) if testData == False else startIdx+numFeat
+            datum = episode[startIdx:endIdx]
             
-def generate_test_states(data, scaler):
-    """
-        Function that returns the next (s) pair from the input data one by one every time you call it. Requires a 
-        scaler to have been computed so that we can approximate the vaues for the 'NA' pairs in the data.
-    """
-    # Get the known states
-    known_states = [state for state in get_known_states(data)]
-
-    event_length = 9
-    state_length = 9 
-    num_states = 1
-    test_s = []
-    for episode in data:
-        # Start at the beginning and keep looking at a net length of len(s)  points
-        # Each time, we increment our start position by s = 9 points
-        curr_state = 0
-        while curr_state < num_states:
-            start_idx = curr_state * state_length
-            end_idx = start_idx + event_length
-            datum = episode[start_idx:end_idx]
-            # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
             try:
-                s = np.array(datum[:9].astype(np.float))
-                s = scaler.transform(s)
-                test_s.append(s)
-            # IF there was a value error it means there was a 'NA' field somewhere. 
+                s = np.array(datum[:numFeat].astype(np.float))
+
+                if testData == True:
+                    yield s, numFeat
+                else:
+                    a = 1.0 if datum[9:10] == 'true' else -1.0
+                    r = datum[10:11].astype(np.float)
+                    s_p = np.array(datum[11:20].astype(np.float))
+                    a_p = 1.0 if datum[20:21] == 'true' else -1.0
+
+                    # prepare to pass the value                 
+                    yield s, a, r, s_p, a_p, numFeat
+            
+            # we have a 'NA' in the current state or the next state
             except ValueError:
-                # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
-                # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
-#                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = scaler.transform(s)
-                test_s.append(s)
-            curr_state += 1
-    return test_s
+
+                if testData == True:
+                    # we fill in the missing value as 0.0 (the mean value)
+                    s = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                    yield s, numFeat
+                else:
+                    s = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                    s_p = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                    yield s, a, r, s_p, a_p, numFeat
+            
+            # to the next state, action, reward
+            sarCount += 1
+            
+
+def generateSARSASamples(data, testData = False):
+
+    # if parsing training data
+    if testData == False:
+    
+        # state normalizer
+        stateNormalizer = preprocessing.StandardScaler()
+
+        # rewards normalizer
+        rewardNormalizer = preprocessing.MinMaxScaler()
+
+        # iterate through and aggregate the data
+        aggState = []
+        rewards = []
+        currAction = []
+        nextAction = []
+        
+        for s,a,r,s_p, a_p, numFeat in getValidStates(data):
+
+            # aggregate s and s_p
+            aggState.append(s)
+            aggState.append(s_p)
+
+            # append r to rewards 
+            rewards.append(r)
+
+            # append a to currAction
+            currAction.append(a)
+
+            # append a_p to nextAction
+            nextAction.append(a) 
+            
+        #  normalize the aggregated states
+        stateNormalizer.fit(aggState)
+        aggState = stateNormalizer.transform(aggState)
+        
+        #
+        # Serialize scaler
+        #
+        paramsOut = open("Scaler.pk1", 'wb')
+        pickle.dump(stateNormalizer, paramsOut, -1)
+        paramsOut.close()
+
+        
+        # (Min-Max) normalize the rewards 
+        r = rewards #np.array(rewardNormalizer.fit_transform(rewards))
+
+        # allocate SARSA
+        sarsa = np.zeros((len(r), 2*numFeat+3))
+
+        #
+        # populate SARSA
+        #
+
+        # populate the state related fields
+        for i,idx in enumerate(range(0,len(aggState),2)):
+            sarsa[i,0:numFeat] = aggState[idx]
+            sarsa[i,numFeat+2:-1] = aggState[idx+1]
+
+        # populate the rewards and actions
+        sarsa[:,numFeat] = np.array(currAction)
+        sarsa[:,numFeat+1:numFeat+2] = r
+        sarsa[:,-1] = np.array(nextAction)
+
+        return sarsa, numFeat
+    else:
+
+        #
+        # De-Serialize scaler
+        #
+        scalerIn = open('Scaler.pk1', 'rb')
+        stateNormalizer = pickle.load(scalerIn)
+        scalerIn.close()
+
+        states = []
+        for s, numFeat in getValidStates(data, testData):
+            states.append(s)
+
+#        testStates = np.array(stateNormalizer.transform(states))
+        testStates = np.array(states)
+        return testStates, numFeat
+    
+
 
 # Policy Evaluation at the given states
-def EvaluatePolicy(s, w_pi, useRBFKernel = False):
+def EvaluatePolicy(s, w_pi, numFeat, useRBFKernel = False):
   
     # the value of the improved policy
     value = np.zeros((len(s),1))
@@ -154,16 +153,22 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
     # the new policy
     policy = [False] * len(s)
 
+    # allocate phi and phi_s_prime
+    phi_s = np.zeros(2*numFeat)
+    phi_s_prime = np.zeros(2*numFeat)
+
     # iterate through every state, 
     for idx in range(len(s)):
 
+        phi_s[0:numFeat] = s[idx,0:numFeat]
+        phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
+
         # State-Action value function for actions 0.0 and 1.0
         if useRBFKernel == True:
-            q0 = np.dot(computePhiRBF(s[idx], 0.0).T, w_pi)
-            q1 = np.dot(computePhiRBF(s[idx], 1.0).T, w_pi)
+            assert False
         else:
-            q0 = np.dot(np.append(s[idx, 0],0.0), w_pi)
-            q1 = np.dot(np.append(s[idx, 0],1.0), w_pi)
+            q0 = np.dot(phi_s, w_pi)
+            q1 = np.dot(phi_s_prime, w_pi)
 
         # update the value
         value[idx] = max(q0, q1)
@@ -173,7 +178,7 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
         
     return (policy, value)
 
-def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=None):
+def CrossValidate(model, model_name, numFeat, gamma, sars, sarsa=[], current_pi=[], fn=None):
     # the number of times to run the cross validation for a given gamma
     maxCVTimes  = 5
 
@@ -212,13 +217,13 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
                 
             # LSPI
             if model_name == "lspi":
-                _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
+                _, w_pi,_ = model(sars[trainRows,:], current_pi, numFeat, g)
             # FVI
             else:
                 w_pi = (model(fn, sars[trainRows,:], gamma=g)).coef_
                 
             # evaluate the policy at sars[testRows,:]
-            _,values = EvaluatePolicy(sars[testRows,0:1], w_pi)
+            _,values = EvaluatePolicy(sars[testRows,0:1], w_pi, numFeat)
                 
             # update the mean_policy_values for the current gamma
             mean_policy_values[gIdx] = mean_policy_values[gIdx] + np.mean(values)
