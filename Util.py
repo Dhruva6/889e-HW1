@@ -30,6 +30,7 @@ def get_known_states(data):
                 pass    
             curr_state += 1
             
+
 def generate_sarsa(data):
     """
         Function that returns the next (s, a, r, s', a') pair from the input data one by one every time you call it. Requires a 
@@ -62,11 +63,11 @@ def generate_sarsa(data):
             # If its normal data without 'NA', proceed as before except we 'scale' the values to mean-0 and variance-1
             a = 1.0 if datum[9:10]=='true' else 0.0
             r = np.asscalar(datum[10:11].astype(np.float))
+            a_prime = 1.0 if datum[20:21] == 'true' else 0.0
             try:
                 s = datum[:9].astype(np.float)
                 s = scaler.transform(s)
                 s_prime = datum[11:20].astype(np.float)
-                a_prime = 1.0 if datum[20:21] == 'true' else 0.0       
                 s_prime = scaler.transform(s_prime)
                 sarsa.append([s, a, r, s_prime, a_prime])
             # IF there was a value error it means there was a 'NA' field somewhere. 
@@ -74,10 +75,10 @@ def generate_sarsa(data):
                 # ONLY S AND S' have these 'NA' fields (I've confirmed). Therefore we go through them and replace any
                 # fields that have 'NA' with the mean of the corresponding feature, and then apply the scaler.
 #                s = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
                 s = scaler.transform(s)
 #                s_prime = np.array([elem if elem!='NA' else scaler.mean_[i].astype(np.float) for i, elem in enumerate(datum[:9])]).astype(np.float)
-                s_prime = np.array([elem if elem!='NA' else 0.5 for i, elem in enumerate(datum[:9])]).astype(np.float)
+                s_prime = np.array([elem if elem!='NA' else 0.0 for i, elem in enumerate(datum[:9])]).astype(np.float)
                 s_prime = scaler.transform(s_prime).astype(np.float)
                 sarsa.append([s, a, r, s_prime, a_prime])
             curr_state += 1

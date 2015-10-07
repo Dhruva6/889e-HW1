@@ -1,10 +1,14 @@
 ### Main file for HW1 of 15-889e: Real life reinforcement Learning ###
 from optparse import OptionParser
 
-from LSPI import *
-from FVI import *
-from Util import *
-from OMP import *
+import LSPI
+import FVI
+import Util
+import OMP
+import numpy as np
+import csv
+from sklearn import linear_model
+from sklearn import neighbors
 
 #
 # command line options
@@ -31,6 +35,20 @@ parser.add_option("--nn", action="store", type="int", dest="nn", default="5", he
 # parse the options 
 (options, args) = parser.parse_args()
 
+import sys
+
+if options.model=="lspi":
+    model = LSPI.LSPI
+else:
+    model = FVI.FVI
+
+if options.fn=="lstsq": 
+    fn = linear_model.LinearRegression()
+else:
+    print "Using KNN for FVI"
+    n_neighbours= options.nn
+    fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
+
 # if configured to NOT test
 if options.testData == False:
     # prompt
@@ -41,17 +59,10 @@ if options.testData == False:
         data = np.array(list(csv.reader(csv_file))[1:])
     
     # Generate the (s,a,r,s',a') tuple from data
-    sarsa = np.array(generate_sarsa(data))
+    sarsa = np.array(Util.generate_sarsa(data))
 
     # pull out the (s,a,r,s) tuple from sarsa
     sars = sarsa[:,0:4]
-#    elem_list = OMP_TD(sars, 6)
-    if options.fn=="lstsq": 
-        fn = linear_model.LinearRegression()
-    else:
-        print "Using KNN for FVI"
-        n_neighbours= options.nn
-        fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
 
     # should we perform cross validation on gamma?
     if options.model=="lspi":
@@ -63,10 +74,7 @@ if options.testData == False:
     if options.crossValidateGamma == True:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-        if options.model=="lspi":
-            CrossValidate(LSPI, "lspi", gamma, sars, sarsa=sarsa, current_pi=current_pi)
-        else:
-            CrossValidate(FVI, "fvi", gamma, sars, fn=fn)
+        CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
         
     else: # use gamma that was picked using the cross validation
 
@@ -78,13 +86,11 @@ if options.testData == False:
             # console log
             #  the initial policy executed at s'
             current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-            current_pi, w_pi, current_value = LSPI(sars, current_pi, gamma)
+            current_pi, w_pi, current_value = model(sars, current_pi, gamma)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
-            w_pi = (FVI(fn, sars)).coef_
+            w_pi = (model(fn, sars)).coef_
             
-            #fvi_curr_pi = [EvaluatePolicy(s, w_pi)[0] for s in sarsa[:, 0]]
-
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
 
@@ -119,7 +125,7 @@ else :
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # generate the test states from data
-    test_s = np.array(generate_test_states(data, scaler))
+    test_s = np.array(Util.generate_test_states(data, scaler))
 
     # evaluate the policy
-    policy, value = EvaluatePolicy(test_s, w_pi)
+    policy, value = Util.EvaluatePolicy(test_s, w_pi)
