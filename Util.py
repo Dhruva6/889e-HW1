@@ -94,7 +94,7 @@ def generateSARSASamples(data, testData = False):
             
         #  normalize the aggregated states
         stateNormalizer.fit(aggState)
-        #aggState = stateNormalizer.transform(aggState)
+        aggState = stateNormalizer.transform(aggState)
         
         #
         # Serialize scaler
@@ -105,7 +105,7 @@ def generateSARSASamples(data, testData = False):
 
         
         # (Min-Max) normalize the rewards 
-        r = rewards #np.array(rewardNormalizer.fit_transform(rewards))
+        r = np.array(rewardNormalizer.fit_transform(rewards))
 
         # allocate SARSA
         sarsa = np.zeros((len(r), 2*numFeat+3))
@@ -138,8 +138,8 @@ def generateSARSASamples(data, testData = False):
         for s, numFeat in getValidStates(data, testData):
             states.append(s)
 
-#        testStates = np.array(stateNormalizer.transform(states))
-        testStates = np.array(states)
+        testStates = np.array(stateNormalizer.transform(states))
+        #testStates = np.array(states)
         return testStates, numFeat
     
 
