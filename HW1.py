@@ -3,12 +3,13 @@ from optparse import OptionParser
 
 import LSPI
 import FVI
-import Util
 import OMP
 import numpy as np
 import csv
+
 from sklearn import linear_model
 from sklearn import neighbors
+from Util import *
 
 #
 # command line options
@@ -18,7 +19,7 @@ parser = OptionParser()
 # add the options
 parser.add_option("-m", action="store", type="string", dest="model", default="lspi", help="Model to use: lspi or fvi [default=lspi]")
 parser.add_option("-v", action="store_true", dest="crossValidateGamma", default=False, help="Run Cross Validation on gamma[default=False]")
-#parser.add_option("-l", action="store_true", dest="loadWeights", help="Load weights from training[default=False]", default=False)
+parser.add_option("-w", action="store_true", dest="writeTestData", help="write test data[default=False]", default=False)
 parser.add_option("-t", action="store_true", dest="testData", help="Test on given data[default=False]", default=False)
 
 parser.add_option("-f", action="store", type="string", dest="trainFile", help="CSV Training data file name[default=generated_episodes_3000.csv]", default="generated_episodes_3000.csv")
@@ -57,16 +58,20 @@ if options.testData == False:
     # First read in all the data from the file.
     with open(options.trainFile) as csv_file:
         data = np.array(list(csv.reader(csv_file))[1:])
-    
+
+    # SARSA samples 
+    sarsa, numFeat = generateSARSASamples(data)
+    sars = sarsa[:,0:-1]
+
     # Generate the (s,a,r,s',a') tuple from data
-    sarsa = np.array(Util.generate_sarsa(data))
+    # sarsa = np.array(generate_sarsa(data))
 
     # pull out the (s,a,r,s) tuple from sarsa
-    sars = sarsa[:,0:4]
+    # sars = sarsa[:,0:4]
 
     # should we perform cross validation on gamma?
     if options.model=="lspi":
-        gamma = np.linspace(0.95, 1.0, 20, False)
+        gamma = np.linspace(0.1, 1.0, 20, False)
     else:
         gamma = np.linspace(0.8, 1.0, 10, False)
 
@@ -74,25 +79,25 @@ if options.testData == False:
     if options.crossValidateGamma == True:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-        CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
+        CrossValidate(model, options.model, numFeat, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
         
     else: # use gamma that was picked using the cross validation
 
         # gamma (from cross validation)
-        gamma = 0.9975
+        gamma = 0.955
 
         if options.model == "lspi":
             # LSPI
-            # console log
             #  the initial policy executed at s'
-            current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-            current_pi, w_pi, current_value = model(sars, current_pi, gamma)
+            current_pi = sarsa[:,-1]
+            current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
             w_pi = (model(fn, sars)).coef_
             
         # console log
         print "Saving gamma and weights to file: " + options.paramsFile
+        print "num samples {}, num true {}".format(len(sars), sum(current_pi))
 
         # dump the weight and the gamma to disk
         paramsOut = open(options.paramsFile, 'wb')
@@ -100,10 +105,14 @@ if options.testData == False:
         pickle.dump(w_pi, paramsOut, -1)
         paramsOut.close()
 
-        # # save a sample of test data
-        # writer = csv.writer(open(options.testFile, 'w'))
-        # for row in range(0, len(sars)):
-        #     writer.writerow(sars[row,0])
+        if options.writeTestData:
+            # generate a random set of rows to write out
+            testRows = random.sample(range(len(sars)), int(0.8*len(sars)))
+            
+            # save a sample of test data
+            writer = csv.writer(open(options.testFile, 'w'))
+            for row in testRows:
+                writer.writerow(sars[row,0:numFeat])
 else :
 
     print "Loading gamma and w_pi from file: " + options.paramsFile
@@ -113,19 +122,17 @@ else :
     gamma = pickle.load(paramsIn)
     w_pi = pickle.load(paramsIn)
     paramsIn.close()
-    
-    # load the scaler
-    scalerIn = open('Scaler.pk1', 'rb')
-    scaler = pickle.load(scalerIn)
-    scalerIn.close()
-   
+
     # load the file with test data
     print "Loading test data from file: " + options.testFile
     with open(options.testFile) as csv_file:
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # generate the test states from data
-    test_s = np.array(Util.generate_test_states(data, scaler))
+    test_s, numFeat = generateSARSASamples(data, True)
 
     # evaluate the policy
-    policy, value = Util.EvaluatePolicy(test_s, w_pi)
+    policy, value = EvaluatePolicy(test_s, w_pi, numFeat)
+
+    print "Num states: {}, num true: {}".format(len(test_s), sum(policy))
+
