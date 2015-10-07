@@ -2,15 +2,9 @@
 # coding: utf-8
 
 # Solution to the first homework of Real life reinforcement learning
-import csv
 import math
-import random
-import pickle
 import numpy as np
 from sklearn import linear_model
-from Util import generate_sarsa
-from Util import generate_test_states
-from optparse import OptionParser
 
 # the Least Squares Temporal Difference Q learning algorithm
 # Input: sars         - the nx4 array of (s,a,r,s') elements
@@ -18,17 +12,16 @@ from optparse import OptionParser
 #        gamma        - the discount factor (defaults to 0.9)
 #
 # Output: w_pi - the estimated weight for the linear model
-def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False):
+def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
 
     # at present, our basis is R^d - where d is 9 (features) + 1 (action)
-    k = 10
+    k = 2*(numFeat)
 
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
         phi = computePhiRBF(sars[0,0], 0.0)
         k = len(phi)
         
-
     # to avoid singularities, we start off A with a small delta along the diagonal
     delta = 1e-09
 
@@ -38,23 +31,37 @@ def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False):
     # the b vector
     b = np.zeros([k, 1], dtype=float)
 
+    # indices for various operations
+    sIdx = 0
+    aIdx = sIdx + numFeat
+    rIdx = aIdx + 1
+    spIdx = rIdx + 1
+    spIdxEnd = spIdx + k
+
     # iterate through and build A and b
-    for idx in range(0, len(sars)):
+    for idx in range(len(sars)):
+
+        # allocate
+        phi_s = np.zeros((k,1))
+        phi_s_prime = np.zeros((k,1))
                 
         if useRBFKernel == True:
-            phi_s = computePhiRBF(sars[idx,0], sars[idx,1])
-            phi_s_prime = computePhiRBF(sars[idx,3], current_pi[idx,0])
+            assert False
         else:
-            phi_s = np.reshape(np.append(sars[idx,0], sars[idx,1]), (k,1))
-            phi_s_prime = np.reshape(np.append(sars[idx,3], current_pi[idx,0]), (k,1))
-        
+
+            # where to place our features for phi
+            offset = 0 if sars[idx,aIdx] == -1.0 else numFeat
+            phi_s[offset:offset+numFeat,0] = sars[idx,0:aIdx]
+
+            offset = 0 if current_pi[idx] == -1.0 else numFeat
+            phi_s_prime[offset:offset+numFeat,0] = sars[idx,spIdx:spIdxEnd]
+                        
         # Update A - here, we add to A, a Rank 1 matrix formed by
         # the vectors phi(s) and (phi(s) - gamma*phi(s'))
         A = A + np.outer(phi_s, phi_s - gamma*phi_s_prime)
-        #A = A + phi_s * (phi_s - gamma * phi_s_prime).T
-        
+
         # update B - we add to B, the feature vector scaled by the reward
-        b = b + sars[idx,2]*phi_s
+        b = b + sars[idx,rIdx:rIdx+1]*phi_s
 
     # compute the weights for the policy pi - solve the system A*w_pi = b
     w_pi,_,_,_ = np.linalg.lstsq(A, b)
@@ -62,7 +69,7 @@ def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False):
     return w_pi
 
 # Policy Improvement
-def ImprovePolicy(s, w_pi, useRBFKernel = False):
+def ImprovePolicy(s, w_pi, numFeat, useRBFKernel = False):
 
     # the new policy
     policy = np.zeros((len(s),1))
@@ -70,17 +77,22 @@ def ImprovePolicy(s, w_pi, useRBFKernel = False):
     # the value of the improved policy
     value = np.zeros((len(s),1))
 
+    # allocate phi and phi_s_prime
+    phi_s = np.zeros(2*numFeat)
+    phi_s_prime = np.zeros(2*numFeat)
+    
     # iterate through every state, 
     for idx in range(len(s)):
 
+        phi_s[0:numFeat] = s[idx,0:numFeat]
+        phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
+
         # State-Action value function for actions 0.0 and 1.0
         if useRBFKernel == True:
-            q0 = np.dot(computePhiRBF(s[idx], 0.0).T, w_pi)
-            q1 = np.dot(computePhiRBF(s[idx], 1.0).T, w_pi)
+            assert False
         else:
-            q0 = np.dot(np.append(s[idx],0.0), w_pi)
-            q1 = np.dot(np.append(s[idx],1.0), w_pi)
-        
+            q0 = np.dot(phi_s, w_pi)
+            q1 = np.dot(phi_s_prime, w_pi)
 
         # update the policy as argmax(action = {0.0, 1.0}) Q^
         policy[idx] = 1.0 if q1 > q0 else 0.0
@@ -90,7 +102,7 @@ def ImprovePolicy(s, w_pi, useRBFKernel = False):
         
     return (policy, value)
 
-def LSPI(sars, current_pi, gamma, useRBFKernel = False):
+def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
     # the maximum number of iterations to run
     maxIter = 5
 
@@ -105,7 +117,7 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
         phi = computePhiRBF(sars[0,0], 0.0)
         w_pi = np.zeros((len(phi),1))
     else:
-        w_pi = np.zeros((10,1))
+        w_pi = np.zeros((2*numFeat,1))
 
     # the current value for all state-action pairs 
     current_value = np.zeros((len(sars),1))
@@ -117,10 +129,10 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
             print "Now at policy iteration #{}".format(iter)
             
         # Estimate the State-Action VF Approximation using LSTDQ
-        new_w_pi = LSTDQ(sars, current_pi, gamma, useRBFKernel)
-
+        new_w_pi = LSTDQ(sars, current_pi, numFeat, gamma, useRBFKernel)
+        
         # improve the policy
-        new_pi, new_value = ImprovePolicy(sars[:,0], new_w_pi, useRBFKernel)
+        new_pi, new_value = ImprovePolicy(sars[:,0:numFeat], new_w_pi, numFeat, useRBFKernel)
 
         # termination condition
         if np.linalg.norm(new_w_pi - w_pi) < eps:
