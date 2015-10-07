@@ -106,6 +106,7 @@ def generateSARSASamples(data, testData = False):
         
         # (Min-Max) normalize the rewards 
         r = np.array(rewardNormalizer.fit_transform(rewards))
+       # r = np.array(rewards)
 
         # allocate SARSA
         sarsa = np.zeros((len(r), 2*numFeat+3))

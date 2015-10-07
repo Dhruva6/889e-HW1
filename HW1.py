@@ -71,7 +71,7 @@ if options.testData == False:
 
     if options.OMP:
         OMPTDFeatS =  OMP.OMP_TD(sars, 10000, 0.95)
-
+        
         #  features to pull out from s'
         OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
     
@@ -87,6 +87,7 @@ if options.testData == False:
     
         # mask out the features that are not relelvant
         sarsa = sarsa[:, mask]
+        sars = sarsa[:, 0:-1]
 
         # Modify numFeat 
         numFeat = len(OMPTDFeatS)
@@ -155,27 +156,6 @@ else :
 
     # generate the test states from data
     test_s, numFeat = generateSARSASamples(data, True)
-
-    if options.OMP:
-        # From when we trained
-        OMPTDFeatS =  [0, 1, 4, 6, 7]
-
-        # features to pull out from s'
-        OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
-        
-        # create a boolean mask
-        mask = np.zeros((numFeat*2)+3, dtype=bool)
-        mask[OMPTDFeatS] = True
-        mask[numFeat] = True
-        mask[numFeat+1] = True
-        mask[OMPTDFeatSPrime] = True
-        mask[-1] = True
-
-        # mask out the features that are not relelvant
-        test_s = test_s[:, mask]
-        
-        # Modify numFeat 
-        numFeat = len(OMPTDFeatS)
     
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi, numFeat)
