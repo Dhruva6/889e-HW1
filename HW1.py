@@ -64,7 +64,7 @@ if options.testData == False:
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # SARSA samples 
-    sarsa, numFeat = generateSARSASamples(data)
+    sarsa, numFeat, kernelMu = generateSARSASamples(data)
 
     # Update SARS
     sars = sarsa[:,0:-1]

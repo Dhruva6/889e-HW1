@@ -19,7 +19,7 @@ def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
 
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
-        phi = computePhiRBF(sars[0,0], 0.0)
+        phi = computePhiRBF(sars[0,0:numFeat], 0.0)
         k = len(phi)
         
     # to avoid singularities, we start off A with a small delta along the diagonal
@@ -112,9 +112,12 @@ def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
     # epsilon tolerance to terminate the policy improvement
     eps = 1e-02;
 
+    
     # the initial weight vector
     if useRBFKernel == True:
-        phi = computePhiRBF(sars[0,0], 0.0)
+
+        
+        phi = computePhiRBF(sars[0,0:numFeat], 0.0)
         w_pi = np.zeros((len(phi),1))
     else:
         w_pi = np.zeros((2*numFeat,1))
@@ -156,11 +159,7 @@ def LSPI(sars, current_pi, numFeat, gamma, useRBFKernel = False):
 def computePhiRBF(s, a):
 
     # 3 kernels per dimension, centered at mu
-    mu_kernels = [0.25, 0.5, 0.75]
-
-    # get the state in column major format
-    if len(s) == 1:
-        s = s.T
+    mu_kernels = [0.0, 0.5, 0.75]
 
     # the phi
     phi = np.zeros((2*(len(s) * len(mu_kernels) + 1), 1))
