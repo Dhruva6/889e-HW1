@@ -21,6 +21,7 @@ parser.add_option("-m", action="store", type="string", dest="model", default="ls
 parser.add_option("-v", action="store_true", dest="crossValidateGamma", default=False, help="Run Cross Validation on gamma[default=False]")
 parser.add_option("-w", action="store_true", dest="writeTestData", help="write test data[default=False]", default=False)
 parser.add_option("-t", action="store_true", dest="testData", help="Test on given data[default=False]", default=False)
+parser.add_option("-k", action="store_true", dest="useRBFKernel", help="Use RBF Kernel for LSPI[default=False]", default=False)
 
 parser.add_option("-f", action="store", type="string", dest="trainFile", help="CSV Training data file name[default=generated_episodes_3000.csv]", default="generated_episodes_3000.csv")
 parser.add_option("-p", action="store", type="string", dest="paramsFile", help="File with parameters from training[default=params.pk1]", default="params.pk1")
@@ -83,8 +84,6 @@ if options.testData == False:
         mask[OMPTDFeatSPrime] = True
         mask[-1] = True
         
-        print mask
-    
         # mask out the features that are not relelvant
         sarsa = sarsa[:, mask]
         sars = sarsa[:, 0:-1]
@@ -113,7 +112,7 @@ if options.testData == False:
             # LSPI
             #  the initial policy executed at s'
             current_pi = sarsa[:,-1]
-            current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma, kernelMu)
+            current_pi, w_pi, current_value = model(sars, current_pi, numFeat, gamma, kernelMu, options.useRBFKernel)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
             w_pi = (model(fn, sars, numFeat)).coef_
@@ -158,7 +157,7 @@ else :
     test_s, numFeat, kernelMu = generateSARSASamples(data, True)
     
     # evaluate the policy
-    policy, value = EvaluatePolicy(test_s, w_pi, numFeat, kernelMu)
+    policy, value = EvaluatePolicy(test_s, w_pi, numFeat, kernelMu, options.useRBFKernel)
 
     print "Num states: {}, num true: {}, value: {}".format(len(test_s), sum(policy), np.mean(value))
 

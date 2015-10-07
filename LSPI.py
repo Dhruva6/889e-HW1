@@ -12,14 +12,14 @@ from sklearn import linear_model
 #        gamma        - the discount factor (defaults to 0.9)
 #
 # Output: w_pi - the estimated weight for the linear model
-def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
+def LSTDQ(sars, current_pi, numFeat, kernelMu, gamma = 0.9, useRBFKernel = False):
 
     # at present, our basis is R^d - where d is 9 (features) + 1 (action)
     k = 2*(numFeat)
 
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
-        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], 0.0)
+        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], -1)
         k = len(phi)
         
     # to avoid singularities, we start off A with a small delta along the diagonal
@@ -70,7 +70,7 @@ def LSTDQ(sars, current_pi, numFeat, gamma = 0.9, useRBFKernel = False):
     return w_pi
 
 # Policy Improvement
-def ImprovePolicy(s, w_pi, numFeat, useRBFKernel = False):
+def ImprovePolicy(s, w_pi, numFeat, kernelMu, useRBFKernel = False):
 
     # the new policy
     policy = np.zeros((len(s),1))
@@ -84,17 +84,18 @@ def ImprovePolicy(s, w_pi, numFeat, useRBFKernel = False):
     
     # iterate through every state, 
     for idx in range(len(s)):
-
-        phi_s[0:numFeat] = s[idx,0:numFeat]
-        phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
-
-        # State-Action value function for actions 0.0 and 1.0
+        
+        # State-Action value function for actions -1.0 and 1.0
         if useRBFKernel == True:
-            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1)
-            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1)
+            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1).T
+            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1).T
         else:
-            q0 = np.dot(phi_s, w_pi)
-            q1 = np.dot(phi_s_prime, w_pi)
+            phi_s[0:numFeat] = s[idx,0:numFeat]
+            phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
+
+        # compute q0 and q1
+        q0 = np.dot(phi_s, w_pi)
+        q1 = np.dot(phi_s_prime, w_pi)
 
         # update the policy as argmax(action = {-1.0, 1.0}) Q^
         policy[idx] = 1.0 if q1 > q0 else -1.0
@@ -116,7 +117,7 @@ def LSPI(sars, current_pi, numFeat, gamma, kernelMu, useRBFKernel = False):
 
     # the initial weight vector
     if useRBFKernel == True:        
-        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], 0.0)
+        phi = computePhiRBF(kernelMu, numFeat, sars[0,0:numFeat], -1.0)
         w_pi = np.zeros((len(phi),1))
     else:
         w_pi = np.zeros((2*numFeat,1))
@@ -131,10 +132,10 @@ def LSPI(sars, current_pi, numFeat, gamma, kernelMu, useRBFKernel = False):
             print "Now at policy iteration #{}".format(iter)
             
         # Estimate the State-Action VF Approximation using LSTDQ
-        new_w_pi = LSTDQ(sars, current_pi, numFeat, gamma, useRBFKernel)
+        new_w_pi = LSTDQ(sars, current_pi, numFeat, kernelMu, gamma, useRBFKernel)
         
         # improve the policy
-        new_pi, new_value = ImprovePolicy(sars[:,0:numFeat], new_w_pi, numFeat, useRBFKernel)
+        new_pi, new_value = ImprovePolicy(sars[:,0:numFeat], new_w_pi, numFeat, kernelMu, useRBFKernel)
 
         # termination condition
         if np.linalg.norm(new_w_pi - w_pi) < eps:
@@ -155,14 +156,14 @@ def LSPI(sars, current_pi, numFeat, gamma, kernelMu, useRBFKernel = False):
 
     return (current_pi, w_pi, current_value)
 
-def computePhiRBF(kernelMu, numFeat, s,a):
+def computePhiRBF(kernelMu, numFeat, s, a):
 
     # the phi
-    phi = np.zeros((2*(len(s) * len(mu_kernels) + 1), 1))
+    phi = np.zeros((2*(len(s) * kernelMu.shape[1] + 1), 1))
 
     # start counter
-    idx = 0 if a == -1.0 else len(s)*len(mu_kernels)+1
-    
+    idx = 0 if a == -1.0 else len(s)*kernelMu.shape[1]+1
+
     # constant basis
     phi[idx] = 1.0
 
@@ -175,9 +176,9 @@ def computePhiRBF(kernelMu, numFeat, s,a):
         # for each mu in the kernel
         for mu in kernelMu[dim]:
 
-            phi[idx] = math.exp(-0.5 * (s[0,dim] - mu) **2)
+            phi[idx] = math.exp(-0.5 * (s[dim] - mu) **2)
             
             # to the next entry
             idx = idx+1
-
+            
     return phi

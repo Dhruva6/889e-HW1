@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 from sklearn import preprocessing
 import random
+from LSPI import computePhiRBF
             
 def getValidStates(data, testData = False):
     """
@@ -205,16 +206,17 @@ def EvaluatePolicy(s, w_pi, numFeat, kernelMu, useRBFKernel = False):
     # iterate through every state, 
     for idx in range(len(s)):
 
-        phi_s[0:numFeat] = s[idx,0:numFeat]
-        phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
-
         # State-Action value function for actions 0.0 and 1.0
         if useRBFKernel == True:
-            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1)
-            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1)       
+            phi_s = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], -1).T
+            phi_s_prime = computePhiRBF(kernelMu, numFeat, s[idx,0:numFeat], 1).T     
         else:
-            q0 = np.dot(phi_s, w_pi)
-            q1 = np.dot(phi_s_prime, w_pi)
+            phi_s[0:numFeat] = s[idx,0:numFeat]
+            phi_s_prime[numFeat:2*numFeat] = s[idx,0:numFeat]
+
+        # compute the state action value
+        q0 = np.dot(phi_s, w_pi)
+        q1 = np.dot(phi_s_prime, w_pi)
 
         # update the value
         value[idx] = max(q0, q1)
