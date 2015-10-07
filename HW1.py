@@ -50,6 +50,9 @@ else:
     n_neighbours= options.nn
     fn = neighbors.KNeighborsRegressor(n_neighbours, weights="distance")
 
+# OMPTD - hacked in.  This should come from calling the OMP-TD method
+OMPTDFeatS = [0, 4, 5, 6, 7]
+
 # if configured to NOT test
 if options.testData == False:
     # prompt
@@ -61,13 +64,28 @@ if options.testData == False:
 
     # SARSA samples 
     sarsa, numFeat = generateSARSASamples(data)
+
+    # features to pull out from s'
+    OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
+    
+    # create a boolean mask
+    mask = np.zeros((numFeat*2)+3, dtype=bool)
+    mask[OMPTDFeatS] = True
+    mask[numFeat] = True
+    mask[numFeat+1] = True
+    mask[OMPTDFeatSPrime] = True
+    mask[-1] = True
+
+    print mask
+    
+    # mask out the features that are not relelvant
+    sarsa = sarsa[:, mask]
+
+    # Modify numFeat 
+    numFeat = len(OMPTDFeatS)
+
+    # update SARS
     sars = sarsa[:,0:-1]
-
-    # Generate the (s,a,r,s',a') tuple from data
-    # sarsa = np.array(generate_sarsa(data))
-
-    # pull out the (s,a,r,s) tuple from sarsa
-    # sars = sarsa[:,0:4]
 
     # should we perform cross validation on gamma?
     if options.model=="lspi":
@@ -131,6 +149,23 @@ else :
     # generate the test states from data
     test_s, numFeat = generateSARSASamples(data, True)
 
+    # features to pull out from s'
+    OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
+    
+    # create a boolean mask
+    mask = np.zeros((numFeat*2)+3, dtype=bool)
+    mask[OMPTDFeatS] = True
+    mask[numFeat] = True
+    mask[numFeat+1] = True
+    mask[OMPTDFeatSPrime] = True
+    mask[-1] = True
+    
+    # mask out the features that are not relelvant
+    test_s = test_s[:, mask]
+
+    # Modify numFeat 
+    numFeat = len(OMPTDFeatS)
+    
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi, numFeat)
 
