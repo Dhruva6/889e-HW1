@@ -75,7 +75,7 @@ if options.testData == False:
     if options.crossValidateGamma == True:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-        CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
+        Util.CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
         
     else: # use gamma that was picked using the cross validation
 
