@@ -26,6 +26,7 @@ parser.add_option("-o", action="store_true", dest="OMP", help="Run OMP_TD[defaul
 parser.add_option("-f", action="store", type="string", dest="trainFile", help="CSV Training data file name[default=generated_episodes_3000.csv]", default="generated_episodes_3000.csv")
 parser.add_option("-p", action="store", type="string", dest="paramsFile", help="File with parameters from training[default=params.pk1]", default="params.pk1")
 parser.add_option("-s", action="store", type="string", dest="testFile", help="CSV Test data file name[default=testData.csv]", default="testData.csv")
+parser.add_option("-k", action="store_true", dest="rbf", help="Use the RBFKernel", default=False)
 
 #
 # FVI options
@@ -76,13 +77,13 @@ if options.testData == False:
     if options.crossValidateGamma == True:
         #  the initial policy executed at s'
         current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-        Util.CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn)
+        Util.CrossValidate(model, options.model, gamma, sars, sarsa=sarsa, current_pi=current_pi, fn=fn, useRBF=options.rbf)
         
     else: # use gamma that was picked using the cross validation
 
         # gamma (from cross validation)
         gamma = 0.9975
-
+        k = 10
         if options.OMP:
             print "Running OMP-TD and extracting 5 features"
             elemList = OMP.OMP_TD(sars, 100000, gamma)
@@ -93,13 +94,14 @@ if options.testData == False:
                 new_sarsa.append([new_s, a, r, new_s_prime, a_prime])
             sarsa = np.array(new_sarsa)
             sars = sarsa[:, 0:4]
+            k = 6
 
         if options.model == "lspi":
             # LSPI
             # console log
             #  the initial policy executed at s'
             current_pi = np.reshape(sarsa[:,4], (len(sars),1))
-            current_pi, w_pi, current_value = model(sars, current_pi, gamma)
+            current_pi, w_pi, current_value = model(sars, current_pi, gamma, useRBFKernel=options.rbf, k=k)
         else:
             print "Running FVI One *ALL* the training data with gamma {0:.3f}".format(gamma)
             w_pi = (model(fn, sars)).coef_

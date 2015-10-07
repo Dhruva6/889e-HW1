@@ -173,7 +173,7 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
         
     return (policy, value)
 
-def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=None):
+def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=None, useRBF=False):
     # the number of times to run the cross validation for a given gamma
     maxCVTimes  = 5
 
@@ -212,7 +212,7 @@ def CrossValidate(model, model_name, gamma, sars, sarsa=[], current_pi=[], fn=No
                 
             # LSPI
             if model_name == "lspi":
-                _, w_pi,_ = model(sars[trainRows,:], current_pi, g)
+                _, w_pi,_ = model(sars[trainRows,:], current_pi, g, useRBFKernel=useRBF)
             # FVI
             else:
                 w_pi = (model(fn, sars[trainRows,:], gamma=g)).coef_

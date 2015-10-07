@@ -18,11 +18,7 @@ from optparse import OptionParser
 #        gamma        - the discount factor (defaults to 0.9)
 #
 # Output: w_pi - the estimated weight for the linear model
-def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False):
-
-    # at present, our basis is R^d - where d is 9 (features) + 1 (action)
-    k = len(sars[0][0])+1
-
+def LSTDQ(sars, current_pi, gamma = 0.9, useRBFKernel = False, k=10):
     # if configured to use the RBF Kernel
     if useRBFKernel == True:
         phi = computePhiRBF(sars[0,0], 0.0)
@@ -90,7 +86,7 @@ def ImprovePolicy(s, w_pi, useRBFKernel = False):
         
     return (policy, value)
 
-def LSPI(sars, current_pi, gamma, useRBFKernel = False):
+def LSPI(sars, current_pi, gamma, useRBFKernel = False, k = 10):
     # the maximum number of iterations to run
     maxIter = 5
 
@@ -99,8 +95,6 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
 
     # epsilon tolerance to terminate the policy improvement
     eps = 1e-02;
-
-    k = len(sars[0][0])+1
 
     # the initial weight vector
     if useRBFKernel == True:
@@ -119,7 +113,7 @@ def LSPI(sars, current_pi, gamma, useRBFKernel = False):
             print "Now at policy iteration #{}".format(iter)
             
         # Estimate the State-Action VF Approximation using LSTDQ
-        new_w_pi = LSTDQ(sars, current_pi, gamma, useRBFKernel)
+        new_w_pi = LSTDQ(sars, current_pi, gamma, useRBFKernel, k=k)
 
         # improve the policy
         new_pi, new_value = ImprovePolicy(sars[:,0], new_w_pi, useRBFKernel)
