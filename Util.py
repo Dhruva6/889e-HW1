@@ -185,7 +185,7 @@ def generateSARSASamples(data, testData = False):
 
         testStates = np.array(stateNormalizer.transform(states))
         #testStates = np.array(states)
-        return testStates, numFeat
+        return testStates, numFeat, kernelMu
     
 
 

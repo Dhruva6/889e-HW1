@@ -155,7 +155,7 @@ else :
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # generate the test states from data
-    test_s, numFeat = generateSARSASamples(data, True)
+    test_s, numFeat, kernelMu = generateSARSASamples(data, True)
     
     # evaluate the policy
     policy, value = EvaluatePolicy(test_s, w_pi, numFeat, kernelMu)
