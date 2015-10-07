@@ -151,6 +151,9 @@ def EvaluatePolicy(s, w_pi, useRBFKernel = False):
     # the value of the improved policy
     value = np.zeros((len(s),1))
 
+    print "From evalPOL- s[0] = ", np.append(s[0,0], 1.0)
+    print "w - ", w_pi
+    print "dot- ", np.dot(np.append(s[0,0], 1.0), w_pi)
     # the new policy
     policy = [False] * len(s)
 

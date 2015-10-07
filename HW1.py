@@ -130,9 +130,4 @@ else :
     test_s = np.array(Util.generate_test_states(data, scaler))
 
     # evaluate the policy
-    policy, value = Util.EvaluatePolicy(test_s, w_pi)
-    print "Evaluated Policy -", len(policy)
-    for elem in policy:
-        if not elem:
-            print "There was a false elem as well"
-            break
+    policy, value = Util.EvaluatePolicy(test_s, w_pi)    
