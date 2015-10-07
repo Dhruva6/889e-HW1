@@ -94,7 +94,7 @@ def generateSARSASamples(data, testData = False):
             
         #  normalize the aggregated states
         stateNormalizer.fit(aggState)
-        aggState = stateNormalizer.transform(aggState)
+        #aggState = stateNormalizer.transform(aggState)
         
         #
         # Serialize scaler
