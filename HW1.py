@@ -63,7 +63,7 @@ if options.testData == False:
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # SARSA samples 
-    sarsa, numFeat = generateSARSASamples(data)
+    sarsa, numFeat, kernelMu = generateSARSASamples(data)
 
     # features to pull out from s'
     OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
@@ -150,7 +150,7 @@ else :
         data = np.array(list(csv.reader(csv_file))[1:])
 
     # generate the test states from data
-    test_s, numFeat = generateSARSASamples(data, True)
+    test_s, numFeat, kernelMu = generateSARSASamples(data, True)
 
     # features to pull out from s'
     OMPTDFeatSPrime = [x+numFeat+2 for x in OMPTDFeatS] 
